@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ข้อมูลระบบ: ทุกคนที่เปิดหน้าเว็บ (เข้าสู่ระบบแบบไม่ระบุตัวตนอัตโนมัติ) อ่านและบันทึกได้
+    match /tanks/{id} { allow read, write: if request.auth != null; }
+    match /cfg/{id} { allow read, write: if request.auth != null; }
+    match /insp/{id} { allow read, write: if request.auth != null; }
+    match /defects/{id} { allow read, write: if request.auth != null; }
+    // รูปภาพ: อ่านได้ เพิ่มได้ไม่เกินประมาณ 1 MB ต่อรูป ลบได้ แต่แก้ไขรูปเดิมไม่ได้
+    match /blobs/{id} {
+      allow read, delete: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.d is string && request.resource.data.d.size() < 1000000;
+    }
+  }
+}
