@@ -1,0 +1,1026 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f2731">
+<meta name="description" content="FEMS – Fire Extinguisher Management System ระบบบริหารจัดการและตรวจสอบถังดับเพลิง">
+<meta name="apple-mobile-web-app-title" content="FEMS">
+<meta name="application-name" content="FEMS">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<script>
+// ตัวกลาง: หน้าเว็บเรียก claude.use(...) แล้วได้บริการจาก Firebase แทน
+window.__fbReady=new Promise(r=>{window.__fbResolve=r});
+window.claude={gh:true,selfUrl:location.origin+location.pathname,use:n=>window.__fbReady.then(api=>api[n]||null)};
+</script>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js">
+<script src="firebase-config.js"></script>
+<script type="module" src="firebase-shim.js"></script>
+</head>
+<body>
+<title>FEMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: plant-floor tool — sticky header with mode switch, single column of operable cards, tank codes set as equipment tags */
+:root{
+  --bg:#eef0ec;--surface:#ffffff;--sunk:#f6f7f4;--ink:#1a2028;--mut:#59636e;--line:#d5d9d2;
+  --fire:#c22d1a;--fire-ink:#ffffff;--ok:#2b7a4c;--warn:#a96a12;--info:#2d5b86;--sel:#1a2028;--sel-ink:#ffffff;
+  --slab:#1f2731;--slab-ink:#f2f4f6;--slab-mut:#a9b4bf;--slab-line:#36414d;--shadow:0 1px 2px rgba(20,28,36,.06),0 4px 14px rgba(20,28,36,.05);
+  --f-disp:"Bai Jamjuree","IBM Plex Sans Thai",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161b;--surface:#1b2128;--sunk:#161b21;--ink:#e6eaee;--mut:#9aa6b2;--line:#323b45;--fire:#ee6550;--fire-ink:#1a0d0a;--ok:#5cba82;--warn:#e0a548;--info:#7eaee0;--sel:#e6eaee;--sel-ink:#12161b;--slab:#232c36;--slab-ink:#eef1f4;--slab-mut:#9aa6b2;--slab-line:#3a4652;--shadow:0 1px 2px rgba(0,0,0,.3);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12161b;--surface:#1b2128;--sunk:#161b21;--ink:#e6eaee;--mut:#9aa6b2;--line:#323b45;--fire:#ee6550;--fire-ink:#1a0d0a;--ok:#5cba82;--warn:#e0a548;--info:#7eaee0;--sel:#e6eaee;--sel-ink:#12161b;--slab:#232c36;--slab-ink:#eef1f4;--slab-mut:#9aa6b2;--slab-line:#3a4652;--shadow:0 1px 2px rgba(0,0,0,.3);color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:20;background:var(--surface)}
+#app{max-width:1000px;margin:0 auto;padding-block:0 64px}
+h1,h2,h3{font-family:var(--f-disp);font-weight:600;text-wrap:balance;margin:0}
+h1{font-size:23px;line-height:1.25}h2{font-size:18px}h3{font-size:16px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--info);outline-offset:2px}
+.hd{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;background:var(--surface);border-bottom:1px solid var(--line);margin:0 calc(-1*max(16px,env(safe-area-inset-right,0px))) 0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:8px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.hd-in{max-width:1000px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand b{font-family:var(--f-disp);font-size:18px;font-weight:700;letter-spacing:.06em}
+.bn{display:grid;line-height:1.15}.bt{font-size:11.5px;color:var(--mut)}
+@media (max-width:420px){.bt{display:none}}
+.mark{width:14px;height:20px;border-radius:3px 3px 2px 2px;background:var(--fire);position:relative;flex:none}
+.mark::after{content:"";position:absolute;left:4px;top:-4px;width:6px;height:4px;background:var(--ink);border-radius:1px}
+.seg{margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:500}
+.seg button.on{background:var(--sel);color:var(--sel-ink)}
+.nav{display:flex;gap:18px;overflow-x:auto;scrollbar-width:none;margin-top:6px}
+.nav::-webkit-scrollbar{display:none}
+.nav button{border:0;background:none;padding:8px 0 9px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;font-size:14px;color:var(--mut)}
+.nav button.on{color:var(--ink);font-weight:600;border-color:var(--fire)}
+.who{font-size:12px;color:var(--mut)}
+.page{display:grid;gap:12px;margin-top:16px}
+.lead{color:var(--mut);font-size:13px;margin-top:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.card.flag{border-color:var(--fire);border-width:2px}
+.card.note{background:var(--sunk);font-size:13px;color:var(--mut)}
+.row2{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.tiles{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-align:left;cursor:pointer}
+.tile span{display:block;font-size:12px;color:var(--mut)}
+.tile b{display:block;font-family:var(--f-disp);font-size:28px;line-height:1.15;font-variant-numeric:tabular-nums}
+.tile.k-fire{border-left:5px solid var(--fire)}.tile.k-warn{border-left:5px solid var(--warn)}.tile.k-info{border-left:5px solid var(--info)}.tile.k-ok{border-left:5px solid var(--ok)}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.li{display:flex;gap:6px 12px;align-items:center;flex-wrap:wrap;padding:11px 14px;border-top:1px solid var(--line);width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;cursor:pointer}
+.li:first-child{border-top:0}
+.li:hover{background:var(--sunk)}
+.li .grow{flex:1;min-width:160px}
+.li.head{cursor:default;font-weight:600;background:var(--sunk)}
+.sub{font-size:12.5px;color:var(--mut)}
+.tag{font-family:var(--f-mono);font-weight:600;font-size:13px;letter-spacing:.02em;border:1.5px solid var(--ink);border-radius:4px;padding:0 6px;white-space:nowrap;background:var(--surface)}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap;border:1px solid currentColor}
+.pill.s{border:0;color:var(--fire-ink)}
+.c-fire{color:var(--fire)}.c-ok{color:var(--ok)}.c-warn{color:var(--warn)}.c-info{color:var(--info)}.c-mut{color:var(--mut)}
+.pill.s.c-fire{background:var(--fire)}.pill.s.c-ok{background:var(--ok)}.pill.s.c-warn{background:var(--warn)}.pill.s.c-info{background:var(--info)}
+.btn{min-height:44px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 16px;font-weight:600;border:1.5px solid var(--ink);background:var(--surface);cursor:pointer;text-decoration:none}
+.btn.p{background:var(--ink);color:var(--surface)}
+.btn.f{background:var(--fire);border-color:var(--fire);color:var(--fire-ink)}
+.btn.g{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.btn.q{border-color:var(--line)}
+.btn.sm{min-height:34px;padding:0 12px;font-size:13px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fld{display:grid;gap:4px;font-size:13px;color:var(--mut)}
+.in{width:100%;min-height:46px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);padding:8px 11px;font-size:15px}
+textarea.in{min-height:72px;resize:vertical}
+.in:disabled{opacity:.6}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}
+.chip.on{background:var(--sel);color:var(--sel-ink);border-color:var(--sel)}
+.scan{display:flex;align-items:center;gap:14px;border-radius:12px;padding:16px;background:var(--fire);color:var(--fire-ink);cursor:pointer;border:0;width:100%;text-align:left}
+.scan b{font-family:var(--f-disp);font-size:21px;display:block}
+.scan .qi{width:52px;height:52px;flex:none;border:3px solid currentColor;border-radius:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px}
+.scan .qi i{border:3px solid currentColor;border-radius:2px}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.res{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.res button{min-height:48px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);font-weight:600;cursor:pointer}
+.res button.on-PASS{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.res button.on-FAIL{background:var(--fire);border-color:var(--fire);color:var(--fire-ink)}
+.res button.on-NA{background:var(--mut);border-color:var(--mut);color:var(--surface)}
+.qn{font-family:var(--f-mono);color:var(--mut);margin-right:6px}
+.err{color:var(--fire);font-weight:600;font-size:13.5px}
+.phs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ph{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;background:var(--sunk);border:1px solid var(--line);flex:none}
+.ph img{width:100%;height:100%;object-fit:cover;cursor:zoom-in;display:block}
+.ph .x{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;border:0;background:var(--ink);color:var(--surface);font-size:13px;line-height:22px;cursor:pointer;padding:0}
+.addph{width:72px;height:72px;border:1.5px dashed var(--mut);border-radius:8px;display:grid;place-items:center;text-align:center;font-size:12px;color:var(--mut);cursor:pointer;flex:none;line-height:1.3}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--sunk);font-weight:600;font-size:12.5px;color:var(--mut);border-top:0;white-space:nowrap}
+td.n,th.n{text-align:right}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kv div span{display:block;font-size:12px;color:var(--mut)}
+.ov{position:fixed;inset:0;z-index:40;background:rgba(10,14,18,.55);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.ov .card{max-width:420px;width:100%}
+.ov img{max-width:100%;max-height:85vh;border-radius:8px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:50;background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:8px;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.busy{position:fixed;inset:auto 0 0 0;z-index:45;background:var(--info);color:var(--surface);text-align:center;padding:8px 16px calc(8px + env(safe-area-inset-bottom,0px));font-size:14px}
+.back{border:0;background:none;color:var(--mut);cursor:pointer;padding:0;font-size:13px;justify-self:start}
+.empty{padding:22px 14px;text-align:center;color:var(--mut);font-size:14px}
+.ring{display:grid;place-items:center;text-align:center}
+svg text{font-family:var(--f-body)}
+.sticky-act{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:5}
+@media (prefers-reduced-motion:no-preference){.li,.tile,.btn,.chip{transition:background .12s,border-color .12s}}
+.card,.list,.tile,.tbl{box-shadow:var(--shadow)}
+.dash{background:var(--slab);color:var(--slab-ink);border-radius:14px;padding:18px;display:grid;gap:16px;grid-template-columns:auto 1fr;align-items:center;box-shadow:var(--shadow)}
+.dash .eyebrow{font-size:13px;color:var(--slab-mut)}
+.dash h1{font-size:22px;margin-top:2px}
+.dash .ring{position:relative;width:148px;height:148px}
+.dash .ring b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-disp);font-size:36px;line-height:1;font-variant-numeric:tabular-nums}
+.dash .ring b small{display:block;font-size:12px;font-family:var(--f-body);font-weight:400;color:var(--slab-mut);margin-top:4px;text-align:center}
+.kp{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}
+.kp div{border:1px solid var(--slab-line);border-radius:10px;padding:8px 10px}
+.kp span{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--slab-mut)}
+.kp span i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.kp b{display:block;font-family:var(--f-disp);font-size:24px;font-variant-numeric:tabular-nums}
+.pace{font-size:13px;color:var(--slab-mut);margin-top:10px}
+.pace b{color:var(--slab-ink)}
+@media (max-width:620px){.dash{grid-template-columns:1fr;justify-items:center;text-align:center}.dash>div{width:100%}.kp{grid-template-columns:repeat(2,minmax(0,1fr));text-align:left}}
+.alerts{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.al{display:flex;align-items:center;gap:12px;border-radius:10px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--fire);cursor:pointer;text-align:left;box-shadow:var(--shadow)}
+.al b{font-family:var(--f-disp);font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
+.al.warn{border-left-color:var(--warn)}.al.ok{border-left-color:var(--ok)}
+.sec{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.act{display:flex;gap:12px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+.act:first-child{border-top:0}
+#todo{scroll-margin-top:130px}
+.act .ph{width:52px;height:52px}
+.act .grow{flex:1;min-width:0}
+.act .grow div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zp{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.zp-h{display:flex;justify-content:space-between;align-items:flex-end;gap:10px 16px;flex-wrap:wrap;padding:16px 16px 12px}
+.lg{display:flex;gap:4px 12px;flex-wrap:wrap;font-size:12px;color:var(--mut)}
+.lg span{display:inline-flex;align-items:center;gap:5px}
+.lg .pip{width:11px;height:11px;cursor:default}
+.zr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:12px 16px 14px;border-top:1px solid var(--line);align-items:center}
+.zr.on{background:var(--sunk);box-shadow:inset 4px 0 0 var(--fire)}
+.zr-name{display:grid;gap:1px;text-align:left;background:none;border:0;padding:0;cursor:pointer;min-width:0}
+.zr-t{font-family:var(--f-disp);font-weight:600;font-size:16px;display:flex;align-items:center;gap:6px}
+.zr-name:hover .zr-t{text-decoration:underline;text-underline-offset:3px}
+.ck{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--ok);color:var(--surface);font-size:11px}
+.zr-p{font-family:var(--f-disp);font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.zr-p small{font-size:14px;margin-left:1px;color:var(--mut)}
+.pips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px}
+.pip{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--line);background:var(--sunk);padding:0;cursor:pointer;display:inline-block;flex:none}
+.pip:hover{transform:scale(1.25)}
+.pip.s-ok{background:var(--ok);border-color:var(--ok)}
+.pip.s-defect{background:var(--fire);border-color:var(--fire)}
+.pip.s-draft{background:var(--surface);border-color:var(--warn);border-width:2.5px}
+@media (prefers-reduced-motion:no-preference){.pip{transition:transform .1s}}
+.pickc{margin-top:10px;border:1.5px solid var(--warn);border-radius:10px;padding:12px;background:var(--sunk)}
+.seg2{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg2 button{border:0;background:var(--surface);padding:6px 14px;font-size:13px;cursor:pointer}
+.seg2 button.on{background:var(--sel);color:var(--sel-ink);font-weight:600}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.s-ok.sw,.hb.s-ok{background:var(--ok)}
+.s-defect.sw,.hb.s-defect{background:var(--fire)}
+.s-draft.sw,.hb.s-draft{background:repeating-linear-gradient(135deg,var(--warn) 0 3px,var(--surface) 3px 6px);box-shadow:inset 0 0 0 1.5px var(--warn)}
+.s-none.sw,.hb.s-none{background:var(--line)}
+.hc{padding:4px 16px 14px}
+.hc-ax,.hr{display:grid;grid-template-columns:minmax(110px,190px) minmax(0,1fr) 72px;gap:12px;align-items:center}
+.hc-ticks{position:relative;height:18px}
+.hc-ticks i{position:absolute;transform:translateX(-50%);font-style:normal;font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
+.hc-ticks i:first-child{transform:none}.hc-ticks i:last-child{transform:translateX(-100%)}
+.hr{width:100%;background:none;border:0;border-top:1px solid var(--line);padding:10px 4px;text-align:left;cursor:pointer;border-radius:0}
+.hr:hover,.hr.on{background:var(--sunk)}
+.hr.on{box-shadow:inset 4px 0 0 var(--fire)}
+.hl{display:grid;min-width:0}
+.hl b{font-family:var(--f-disp);font-weight:600;font-size:15px;line-height:1.3}
+.ht{display:flex;gap:2px;height:22px;position:relative;background:linear-gradient(to right,transparent calc(25% - .5px),var(--line) calc(25% - .5px) calc(25% + .5px),transparent 0,transparent calc(50% - .5px),var(--line) calc(50% - .5px) calc(50% + .5px),transparent 0,transparent calc(75% - .5px),var(--line) calc(75% - .5px) calc(75% + .5px),transparent 0)}
+.hb{display:block;height:100%;min-width:3px}
+.hb:first-child{border-radius:4px 0 0 4px}.hb:last-child{border-radius:0 4px 4px 0}.hb:only-child{border-radius:4px}
+.hb:hover{filter:brightness(1.1);outline:2px solid var(--ink);outline-offset:1px;z-index:1}
+.hp{font-family:var(--f-disp);font-weight:600;font-size:18px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tip{position:fixed;z-index:30;pointer-events:none;background:var(--ink);color:var(--surface);border-radius:8px;padding:7px 10px;font-size:13px;line-height:1.4;box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:240px}
+.tip b{display:block}
+@media (max-width:520px){.hc-ax,.hr{grid-template-columns:minmax(0,1fr) 66px;gap:4px 10px}.hl{grid-column:1/-1}.ht{grid-column:1}.hc-ax>span:first-child{display:none}.hc-ax{grid-template-columns:minmax(0,1fr) 66px}}
+.cta{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--fire);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.qg{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.qc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px;align-content:start;box-shadow:var(--shadow)}
+.qbox{background:#fff;border-radius:8px;padding:8px;border:1px solid var(--line);aspect-ratio:1;max-width:100%;display:grid;place-items:center}
+.qbox svg{width:100%;height:100%;display:block}
+.ql{font-weight:600;line-height:1.35;margin-top:6px}
+.bbar{position:fixed;left:0;right:0;bottom:0;z-index:14;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(20,28,36,.08);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.bbar-in{max-width:1000px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.bbar .prog{font-size:12.5px;color:var(--mut);line-height:1.3;min-width:0}
+.bbar .prog b{display:block;font-size:15px;color:var(--ink);font-family:var(--f-disp)}
+.bbar .scan{padding:12px 16px}.bbar .scan b{font-size:18px}.bbar .scan .qi{width:40px;height:40px;padding:4px;gap:3px}
+#app.pad-b{padding-bottom:110px}
+.bb-m{display:none}
+@media (max-width:700px){.bb-m{display:block}#app.pad-m{padding-bottom:110px}.who{display:none}.seg button{padding:6px 10px}}
+.done{display:grid;justify-items:center;text-align:center;gap:10px;padding:28px 16px}
+.done .ic{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:var(--ok);color:var(--surface)}
+.done .ic.f{background:var(--fire);color:var(--fire-ink)}
+.done h1{font-size:24px}
+.card.q-on{border-color:var(--ink)}
+.scanov{position:fixed;inset:0;z-index:60;background:#000;color:#fff}
+.scanov video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scanframe{position:absolute;left:50%;top:46%;width:min(68vw,300px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:18px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
+.scanframe i{position:absolute;width:38px;height:38px;border:5px solid #fff}
+.scanframe i:nth-child(1){left:-3px;top:-3px;border-right:0;border-bottom:0;border-radius:18px 0 0 0}
+.scanframe i:nth-child(2){right:-3px;top:-3px;border-left:0;border-bottom:0;border-radius:0 18px 0 0}
+.scanframe i:nth-child(3){left:-3px;bottom:-3px;border-right:0;border-top:0;border-radius:0 0 0 18px}
+.scanframe i:nth-child(4){right:-3px;bottom:-3px;border-left:0;border-top:0;border-radius:0 0 18px 0}
+@media (prefers-reduced-motion:no-preference){.scanframe::after{content:"";position:absolute;left:8%;right:8%;height:3px;background:#ee6550;border-radius:2px;box-shadow:0 0 12px #ee6550;animation:scanl 1.8s ease-in-out infinite alternate}}
+@keyframes scanl{from{top:8%}to{top:92%}}
+.scantop{position:absolute;left:0;right:0;top:0;padding:calc(20px + env(safe-area-inset-top,0px)) 20px 16px;text-align:center;display:grid;gap:4px;font-size:15px;background:linear-gradient(rgba(0,0,0,.6),transparent)}
+.scantop b{font-family:var(--f-disp);font-size:21px}
+.scanbot{position:absolute;left:0;right:0;bottom:0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;gap:10px;justify-content:center}
+.scanbot .btn{flex:1;max-width:220px}
+.scanbot .btn.q{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.5)}
+.scanbot .btn.p{background:#fff;color:#111;border-color:#fff}
+.scanmsg{position:absolute;left:16px;right:16px;bottom:calc(96px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.75);border-radius:10px;padding:10px 14px;text-align:center;font-size:15px}
+.thero{position:relative;overflow:hidden;border-radius:20px;color:#fff;padding:22px 22px 20px;min-height:190px;display:flex;flex-direction:column;justify-content:space-between;gap:14px;box-shadow:0 8px 24px rgba(20,28,36,.14)}
+.thero.st-ok{background:linear-gradient(135deg,#145c37 0%,#2b7a4c 45%,#3fae6f 100%)}
+.thero.st-defect{background:linear-gradient(135deg,#7d150a 0%,#c22d1a 50%,#ef5a3c 100%)}
+.thero.st-draft{background:linear-gradient(135deg,#7a4a06 0%,#b7791f 55%,#e3a844 100%)}
+.thero.st-none{background:linear-gradient(135deg,#1f2731 0%,#33475b 55%,#4f6b84 100%)}
+.thero::before{content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.08)}
+.thero .ext{position:absolute;right:14px;bottom:-6px;width:118px;height:auto;filter:drop-shadow(0 8px 14px rgba(0,0,0,.3))}
+.thero .tx{position:relative;max-width:calc(100% - 120px);display:grid;gap:4px}
+.thero .code{align-self:flex-start;justify-self:start;font-family:var(--f-mono);font-weight:600;font-size:14px;letter-spacing:.04em;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.5);border-radius:6px;padding:1px 8px}
+.thero h1{font-size:25px;line-height:1.25;color:#fff}
+.thero .meta{font-size:13.5px;opacity:.9}
+.thero .stat{position:relative;align-self:flex-start;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.95);color:#1a2028;border-radius:999px;padding:6px 14px 6px 8px;font-weight:600;font-size:14px}
+.thero .stat i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;font-style:normal;font-size:13px}
+.band{border-left:6px solid var(--line)}
+.band.b-ok{border-left-color:var(--ok);background:linear-gradient(90deg,color-mix(in srgb,var(--ok) 9%,var(--surface)),var(--surface) 55%)}
+.band.b-defect{border-left-color:var(--fire);background:linear-gradient(90deg,color-mix(in srgb,var(--fire) 11%,var(--surface)),var(--surface) 55%)}
+.band.b-draft{border-left-color:var(--warn);background:linear-gradient(90deg,color-mix(in srgb,var(--warn) 10%,var(--surface)),var(--surface) 55%)}
+.band.b-none{border-left-color:transparent}
+.li.zhead{cursor:default;background:var(--sunk);border-top:2px solid var(--ink);padding:9px 14px;gap:8px 14px}
+.li.zhead:first-child,.li.head+.li.zhead{border-top-width:1px;border-top-color:var(--line)}
+.li.zhead b{font-family:var(--f-disp);font-size:16px}
+.zprog{display:flex;align-items:center;gap:8px;min-width:170px}.zprog .bar{width:80px;height:7px}
+.li>.tag{min-width:86px;text-align:center;box-sizing:border-box}
+.band.b-ok .tag{border-color:var(--ok);color:var(--ok)}.band.b-defect .tag{border-color:var(--fire);color:var(--fire)}.band.b-draft .tag{border-color:var(--warn);color:var(--warn)}
+.band.b-NA{border-left-color:var(--mut)}
+.band:hover{filter:brightness(.98)}
+#pdfstage{position:fixed;left:-20000px;top:0;width:794px;background:#fff;color:#111}
+</style>
+<div id="app"><div class="page"><div class="card"><h2>FEMS</h2><p class="sub" style="margin:2px 0 0">Fire Extinguisher Management System · ระบบบริหารจัดการและตรวจสอบถังดับเพลิง</p><p class="lead">กำลังเชื่อมต่อฐานข้อมูล…</p></div></div></div>
+<input id="qrfile" type="file" accept="image/*" capture="environment" hidden>
+<script>
+(()=>{
+'use strict';
+/* ---------- constants ---------- */
+const TZ='Asia/Bangkok';
+const MON=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const ZN={PD:'ผลิต',WH:'คลังสินค้า',FN:'คลังสินค้า (Finished Goods)',EN:'วิศวกรรม',AM:'ธุรการ',LB:'ห้องปฏิบัติการ',SA:'ขายหน้าร้าน'};
+const ZORD=['PD','WH','FN','EN','AM','LB','SA'];
+const TYPES=['Chemical','Co2','Foam','BF2000','Halotron'];
+const DST={OPEN:['ยังไม่แก้ไข','fire'],IN_PROGRESS:['กำลังแก้ไข','warn'],RESOLVED:['แก้แล้ว รอปิดงาน','info'],CLOSED:['ปิดงานแล้ว','ok']};
+const RES={PASS:'ปกติ',FAIL:'ไม่ปกติ',NA:'ไม่เกี่ยวข้อง'};
+const SHORT=['การติดตั้ง','เกจวัดความดัน','แผ่นปิดปลายสาย','สลักนิรภัย','ความสะอาด','สิ่งกีดขวาง','พร้อมใช้งาน'];
+const spec=t=>[t.sz?t.sz+' lb':'',t.cls?'Class '+t.cls:'',t.fr||''].filter(Boolean).join(' · ');
+function checklist(t){
+  const co2=t==='Co2';
+  return [
+    ['install','การติดตั้ง','ถังอยู่ตำแหน่งตามทะเบียน แขวนหรือวางมั่นคง ป้ายบอกตำแหน่งชัดเจน'],
+    co2?['gauge','น้ำหนักถัง (Co2 ไม่มีเกจ)','ตรวจจากบันทึกการชั่งน้ำหนักล่าสุด ไม่ต่ำกว่าเกณฑ์']:['gauge','เกจวัดความดัน','เข็มอยู่ในโซนสีเขียว แรงดันตามที่ผู้ผลิตกำหนด'],
+    ['cap',co2?'แผ่นปิดปลายสาย / กรวยฉีด (Horn)':'แผ่นปิดปลายสาย','สายฉีดและหัวฉีดไม่แตกร้าว ไม่อุดตัน ไม่หลุด'],
+    ['pin','สลักนิรภัย','สลักและซีลอยู่ครบ ไม่ชำรุด ไม่มีร่องรอยถูกใช้งาน'],
+    ['clean','ความสะอาด','ตัวถังสะอาด ไม่มีสนิม คราบ หรือการกัดกร่อน'],
+    ['block','สิ่งกีดขวาง','ไม่มีสิ่งของกีดขวาง มองเห็นและเข้าถึงได้สะดวก'],
+    ['ready','พร้อมใช้งาน','ตัวถังไม่บุบ ไม่รั่วซึม ฉลากอ่านได้ บัตรตรวจ (Tag) ลงบันทึกแล้ว']
+  ];
+}
+const LIB={xlsx:'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',h2p:'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js',jspdf:'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',qr:'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js',jsqr:'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js'};
+
+/* ---------- date helpers (Bangkok, Buddhist era) ---------- */
+const bkk=()=>new Date(Date.now()+7*36e5);
+const roundOf=d=>`${d.getUTCFullYear()+543}-${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+const R=roundOf(bkk());
+const rLabel=r=>{const[y,m]=r.split('-');return MON[+m-1]+' '+y};
+const rounds=n=>{const out=[];const d=bkk();let y=d.getUTCFullYear(),m=d.getUTCMonth();for(let i=0;i<n;i++){out.push(`${y+543}-${String(m+1).padStart(2,'0')}`);if(--m<0){m=11;y--}}return out};
+const TODAY=(()=>{const b=bkk();return Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate())})();
+const THISBE=bkk().getUTCFullYear()+543;
+const fdt=iso=>iso?new Date(iso).toLocaleString('th-TH',{timeZone:TZ,day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
+const fd=iso=>iso?new Date(iso).toLocaleDateString('th-TH',{timeZone:TZ,day:'numeric',month:'short',year:'2-digit'}):'-';
+const nowISO=()=>new Date().toISOString();
+const ago=iso=>{if(!iso)return'-';const m=Math.round((Date.now()-new Date(iso))/6e4);return m<1?'เมื่อสักครู่':m<60?m+' นาทีที่แล้ว':m<1440?Math.floor(m/60)+' ชั่วโมงที่แล้ว':Math.floor(m/1440)+' วันที่แล้ว'};
+
+/* ---------- state ---------- */
+let DB=null,U=null,AS=null,DL=null,ME={id:null,name:''},OWNER=false,READY=false,FATAL='';
+let T=new Map(),CFG={emp:{},life:5,baseUrl:'',admins:[]},I=new Map(),D=[];
+const got={t:false,c:false,i:false,d:false};
+const OI={},H={},PN={},PNreq=new Set();
+const S={qq:'',zv:'chart',pick:'',mode:'field',v:'home',a:null,q:'',zf:'',dept:'',emp:'',ins:null,rev:false,err:'',dtab:'open',or:R,rf:'',eb:'EXPIRED',tq:'',tz:'',lim:40,busy:'',toast:'',conf:null,img:null,dAct:{},tf:null,qrz:'',nd:'',admQ:'',admHits:[],empEdit:null,pendingHash:null,from:null};
+try{const v=JSON.parse(localStorage.getItem('fe-ident')||'{}');S.dept=v.dept||'';S.emp=v.emp||''}catch(e){}
+const saveIdent=()=>{try{localStorage.setItem('fe-ident',JSON.stringify({dept:S.dept,emp:S.emp}))}catch(e){}};
+
+/* ---------- small helpers ---------- */
+const $=s=>document.querySelector(s);
+const GH=!!(window.claude&&window.claude.gh);
+const bl=id=>window.claude&&window.claude.blobUrl?window.claude.blobUrl(id):'/_blob/'+id;
+let blT;window.addEventListener('claude-blob',()=>{clearTimeout(blT);blT=setTimeout(()=>render(),60)});
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tk=c=>T.get(c);
+const byCode=(a,b)=>{const pa=a.c.split('-'),pb=b.c.split('-');return pa[1]===pb[1]?(+pa[2]-+pb[2]):ZORD.indexOf(pa[1])-ZORD.indexOf(pb[1])};
+const actT=()=>[...T.values()].filter(t=>t.active!==false).sort(byCode);
+const zn=t=>ZN[t.z]||t.z;
+const life=()=>+CFG.life||5;
+const exp=t=>t.m?+t.m+life():null;
+const dl=t=>{const e=exp(t);return e?Math.round((Date.UTC(e-543,11,31)-TODAY)/864e5):null};
+const bk=t=>{const d=dl(t);if(d==null)return null;return d<0?'EXPIRED':d<=90?'D90':d<=365?'Y1':d<=1095?'PLAN':'LATER'};
+const isAdmin=()=>OWNER||UNLOCK||(GH&&got.c&&!CFG.admPw);
+let UNLOCK=false,UNLOCK_H='',pwFails=0,pwWait=0;
+const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+const unhex=h=>new Uint8Array(h.match(/../g).map(x=>parseInt(x,16)));
+async function pwHash(pw,salt,iter){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);return hex(await crypto.subtle.deriveBits({name:'PBKDF2',salt:unhex(salt),iterations:iter,hash:'SHA-256'},k,256))}
+function rememberUnlock(){UNLOCK_H=CFG.admPw.hash.slice(0,16);try{localStorage.setItem('fe-adm',JSON.stringify({h:CFG.admPw.hash.slice(0,16),exp:Date.now()+12*36e5}))}catch(e){}}
+function checkUnlock(){let v=null;try{v=JSON.parse(localStorage.getItem('fe-adm')||'null')}catch(e){}const cur=CFG.admPw?CFG.admPw.hash.slice(0,16):'';UNLOCK=!!cur&&(UNLOCK_H===cur||!!(v&&v.h===cur&&v.exp>Date.now()))}
+function lockOffice(){UNLOCK=false;UNLOCK_H='';try{localStorage.removeItem('fe-adm')}catch(e){}S.mode='field';go('home')}
+async function setPw(){
+  const a=S.pw1||'',b=S.pw2||'';if(a.length<6){toast('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');return}if(a!==b){toast('รหัสผ่านทั้งสองช่องไม่ตรงกัน');return}
+  const salt=hex(crypto.getRandomValues(new Uint8Array(16))),iter=150000;S.busy='กำลังบันทึกรหัสผ่าน…';render();
+  try{const hash=await pwHash(a,salt,iter),pw={salt,iter,hash,at:nowISO()};const old=CFG.admPw;CFG.admPw=pw;rememberUnlock();if(!OWNER)UNLOCK=true;try{await wq(()=>DB.doc('cfg/main').update({admPw:pw}))}catch(e){CFG.admPw=old;checkUnlock();throw e}S.pw1=S.pw2='';S.busy='';render();toast('บันทึกรหัสผ่านหลังบ้านแล้ว')}catch(e){S.busy='';toast(errMsg(e))}
+}
+async function tryUnlock(){
+  const pw=S.pwIn||'';if(Date.now()<pwWait){S.pwErr=`ใส่ผิดหลายครั้ง รออีก ${Math.ceil((pwWait-Date.now())/1000)} วินาที`;render();return}
+  if(!CFG.admPw){S.pwErr='ยังไม่ได้ตั้งรหัสผ่านหลังบ้าน ติดต่อเจ้าของระบบ';render();return}
+  if(!pw){S.pwErr='ใส่รหัสผ่าน';render();return}
+  S.pwErr='กำลังตรวจสอบ…';render();
+  const h=await pwHash(pw,CFG.admPw.salt,CFG.admPw.iter);
+  if(h===CFG.admPw.hash){UNLOCK=true;pwFails=0;rememberUnlock();S.pwBox=false;S.pwIn='';S.pwErr='';S.mode='office';go('osum');toast('เข้าสู่หลังบ้านแล้ว')}
+  else{pwFails++;S.pwIn='';if(pwFails>=5){pwWait=Date.now()+30000;pwFails=0}S.pwErr='รหัสผ่านไม่ถูกต้อง';render()}
+}
+const actor=()=>S.emp||ME.name||'ผู้ดูแลระบบ';
+const pill=(cls,t,solid)=>`<span class="pill ${solid?'s ':''}c-${cls}">${esc(t)}</span>`;
+const dpill=s=>pill(DST[s][1],DST[s][0],1);
+const stPill=s=>s==='ok'?pill('ok','ตรวจแล้ว · ปกติ',1):s==='defect'?pill('fire','ตรวจแล้ว · พบข้อบกพร่อง',1):s==='draft'?pill('warn','กำลังตรวจ (ร่าง)'):pill('mut','ยังไม่ตรวจ');
+const tagC=c=>`<span class="tag">${esc(c)}</span>`;
+const img=id=>`<div class="ph"><img src="${esc(bl(id))}" alt="รูปหลักฐาน" loading="lazy" data-a="img" data-id="${esc(id)}"></div>`;
+const allEmp=()=>Object.keys(CFG.emp||{}).sort().map(d=>[d,CFG.emp[d]||[]]);
+const roundMap=r=>{if(r===R)return got.i?I:null;if(OI[r])return OI[r];loadRound(r);return null};
+const stOf=(M,r,c)=>M&&M.get(r+'_'+c)?M.get(r+'_'+c).status:undefined;
+let toastT;function toast(m){S.toast=m;render();clearTimeout(toastT);toastT=setTimeout(()=>{S.toast='';render()},3800)}
+function errMsg(e){const c=e&&e.code;return c==='invalid_argument'?'บัญชีนี้ยังไม่มีสิทธิ์บันทึกข้อมูล ติดต่อผู้ดูแลระบบให้เพิ่มสิทธิ์':c==='quota_exceeded'?'พื้นที่เก็บข้อมูลเต็ม ติดต่อผู้ดูแลระบบ':c==='rate_limited'||c==='resource_exhausted'?'ส่งข้อมูลถี่เกินไป รอสักครู่แล้วลองใหม่':c==='too_large'?'ไฟล์ใหญ่เกินไป':'บันทึกไม่สำเร็จ ตรวจสัญญาณอินเทอร์เน็ตแล้วลองใหม่'}
+let WQ=Promise.resolve();const wq=f=>(WQ=WQ.catch(()=>{}).then(f));
+function names(ids){const miss=ids.filter(i=>i&&!(i in PN)&&!PNreq.has(i));if(miss.length&&U){miss.forEach(i=>PNreq.add(i));U.profiles(miss).then(ps=>{for(const k in ps)PN[k]=ps[k].name||'';render()})}}
+const nm=id=>id?(PN[id]||'ผู้ใช้'):'-';
+const loaded={};
+function lib(k){return loaded[k]||(loaded[k]=new Promise((res,rej)=>{const s=document.createElement('script');s.src=LIB[k];s.onload=res;s.onerror=()=>{delete loaded[k];rej(new Error('lib'))};document.head.appendChild(s)}))}
+function go(v,a){S.v=v;if(a!==undefined)S.a=a;S.err='';S.lim=40;window.scrollTo(0,0);render()}
+
+/* ---------- data loading ---------- */
+async function loadRound(r){if(OI[r]||OI['_'+r])return;OI['_'+r]=1;try{const s=await DB.collection('insp').where('round','==',r).get();OI[r]=new Map(s.docs.map(d=>[d.id,{id:d.id,...d.data()}]))}catch(e){OI[r]=new Map()}delete OI['_'+r];render()}
+async function loadHist(c){if(H[c])return;H[c]='loading';try{const s=await DB.collection('insp').where('c','==',c).get();H[c]=s.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.status!=='draft').sort((a,b)=>a.round<b.round?1:-1)}catch(e){H[c]=[]}render()}
+async function ensureRound(r){if(r===R)return I;if(OI[r])return OI[r];await loadRound(r);return OI[r]||new Map()}
+
+/* ---------- photos ---------- */
+async function shrink(file,stamp){
+  try{const bmp=await createImageBitmap(file);const sc=Math.min(1,1600/Math.max(bmp.width,bmp.height));const cv=document.createElement('canvas');cv.width=Math.round(bmp.width*sc);cv.height=Math.round(bmp.height*sc);const cx=cv.getContext('2d');cx.drawImage(bmp,0,0,cv.width,cv.height);
+    if(stamp){const fs=Math.max(16,Math.round(cv.width/38)),pad=Math.round(fs*.6),lines=stamp.slice(0,3);cx.font=`600 ${fs}px "IBM Plex Sans Thai",sans-serif`;const bh=lines.length*fs*1.35+pad*2;cx.fillStyle='rgba(0,0,0,.6)';cx.fillRect(0,cv.height-bh,cv.width,bh);cx.fillStyle='#fff';cx.textBaseline='top';lines.forEach((l,i)=>cx.fillText(l,pad,cv.height-bh+pad+i*fs*1.35,cv.width-pad*2))}
+    return await new Promise(r=>cv.toBlob(b=>r(b||file),'image/jpeg',.82))}catch(e){return file}
+}
+function stampFor(c,who){const t=tk(c)||{l:''};return[`${c} · ${t.l}`.slice(0,70),`ตรวจเมื่อ ${new Date().toLocaleString('th-TH',{timeZone:TZ,day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'})} น.`,`โดย ${who||actor()}`]}
+async function uploadFiles(files,stamp,times){
+  if(!AS){toast('บัญชีนี้แนบรูปไม่ได้ ติดต่อผู้ดูแลระบบ');return[]}
+  const ids=[];S.busy='กำลังอัปโหลดรูป…';render();
+  try{for(const f of files){const b=await shrink(f,stamp);if(times)times.push(f.lastModified?new Date(f.lastModified).toISOString():nowISO());const r=await AS.upload(b,{type:b.type==='image/jpeg'?'image/jpeg':(['image/png','image/webp','image/gif'].includes(b.type)?b.type:'image/jpeg')});ids.push(r.id)}}
+  catch(e){toast(e&&e.code==='too_large'?'รูปใหญ่เกินไป':'อัปโหลดรูปไม่สำเร็จ ลองใหม่')}
+  S.busy='';render();return ids;
+}
+
+/* ---------- QR ---------- */
+async function decodeQR(file){
+  const bmp=await createImageBitmap(file);
+  if('BarcodeDetector' in window){try{const r=await new BarcodeDetector({formats:['qr_code']}).detect(bmp);if(r&&r[0])return r[0].rawValue}catch(e){}}
+  await lib('jsqr');
+  for(const max of [1000,1600,700]){const sc=Math.min(1,max/Math.max(bmp.width,bmp.height));const cv=document.createElement('canvas');cv.width=Math.round(bmp.width*sc);cv.height=Math.round(bmp.height*sc);const cx=cv.getContext('2d');cx.drawImage(bmp,0,0,cv.width,cv.height);const d=cx.getImageData(0,0,cv.width,cv.height);const r=window.jsQR(d.data,cv.width,cv.height,{inversionAttempts:'attemptBoth'});if(r&&r.data)return r.data}
+  return null;
+}
+async function onQR(file){
+  S.busy='กำลังอ่าน QR…';render();let txt=null;
+  try{txt=await decodeQR(file)}catch(e){}
+  S.busy='';const m=txt&&String(txt).toUpperCase().match(/E-[A-Z]{2}-\d+/);
+  if(!m){toast('อ่าน QR ไม่ได้ ถ่ายให้ใกล้และชัดขึ้น หรือพิมพ์รหัสถังแทน');return}
+  openCode(m[0]);
+}
+let SC=null;
+function scanClose(){if(!SC)return;SC.stop=true;try{SC.stream&&SC.stream.getTracks().forEach(t=>t.stop())}catch(e){}SC.el.remove();SC=null;document.body.style.overflow=''}
+async function liveScan(){
+  if(SC)return;
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){$('#qrfile').click();return}
+  const el=document.createElement('div');el.className='scanov';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','สแกน QR');
+  el.innerHTML='<video playsinline muted autoplay></video><div class="scanframe" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="scantop"><b>ส่องกล้องไปที่ QR บนถัง</b><span>ระบบอ่านให้อัตโนมัติ ไม่ต้องกดถ่าย</span></div><div class="scanbot"><button class="btn q" data-sc="photo">ถ่ายรูป QR แทน</button><button class="btn p" data-sc="close">ปิด</button></div><div class="scanmsg" hidden></div>';
+  document.body.appendChild(el);document.body.style.overflow='hidden';
+  SC={el,stop:false,stream:null};const me=SC;
+  el.addEventListener('click',e=>{const b=e.target.closest('[data-sc]');if(!b)return;const a=b.dataset.sc;scanClose();if(a==='photo')$('#qrfile').click()});
+  const msg=t=>{const m=el.querySelector('.scanmsg');m.textContent=t;m.hidden=false};
+  try{me.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false})}
+  catch(e){if(me.stop)return;msg('เปิดกล้องไม่ได้ อนุญาตการใช้กล้องในเบราว์เซอร์ หรือกด "ถ่ายรูป QR แทน"');return}
+  if(me.stop){me.stream.getTracks().forEach(t=>t.stop());return}
+  const v=el.querySelector('video');v.srcObject=me.stream;try{await v.play()}catch(e){}
+  let det=null;if('BarcodeDetector' in window){try{const f=await BarcodeDetector.getSupportedFormats();if(f.includes('qr_code'))det=new BarcodeDetector({formats:['qr_code']})}catch(e){}}
+  if(!det){try{await lib('jsqr')}catch(e){msg('โหลดตัวอ่าน QR ไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองใหม่');return}}
+  const cv=document.createElement('canvas'),cx=cv.getContext('2d',{willReadFrequently:true});
+  const found=txt=>{const m=String(txt).toUpperCase().match(/E-[A-Z]{2}-\d+/);if(!m){msg('QR นี้ไม่ใช่ป้ายถังดับเพลิงของระบบ');return false}try{navigator.vibrate&&navigator.vibrate(80)}catch(e){}scanClose();openCode(m[0]);return true};
+  const tick=async()=>{
+    if(me.stop)return;
+    if(v.readyState>=2&&v.videoWidth){
+      try{
+        if(det){const r=await det.detect(v);if(r&&r[0]&&found(r[0].rawValue))return}
+        else{const sc=Math.min(1,720/Math.max(v.videoWidth,v.videoHeight));cv.width=Math.round(v.videoWidth*sc);cv.height=Math.round(v.videoHeight*sc);cx.drawImage(v,0,0,cv.width,cv.height);const d=cx.getImageData(0,0,cv.width,cv.height);const r=window.jsQR(d.data,cv.width,cv.height,{inversionAttempts:'dontInvert'});if(r&&r.data&&found(r.data))return}
+      }catch(e){}
+    }
+    setTimeout(tick,180);
+  };
+  tick();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&SC)scanClose()});
+function openCode(c){
+  if(!tk(c)){if(!T.size){S.pendingHash=c;return}toast('ไม่พบถังรหัส '+c+' ในทะเบียน');return}
+  S.mode='field';const s=stOf(I,R,c);
+  if(S.emp&&s!=='ok'&&s!=='defect')startIns(c);else go('tank',c);
+}
+
+/* ---------- inspection ---------- */
+function startIns(c,ex){
+  const t=tk(c);if(!t)return;
+  const round=ex?ex.round:R,id=round+'_'+c,cur=ex||(round===R?I.get(id):null),edit=!!(cur&&cur.status!=='draft');
+  if(!edit&&!S.emp){toast('เลือกหน่วยงานและชื่อผู้ตรวจก่อนเริ่มตรวจ');S.mode='field';go('check');return}
+  S.ins={id,round,c,edit,dept:edit?cur.dept:S.dept,emp:edit?cur.emp:S.emp,items:checklist(t.t).map((q,i)=>{const o=cur&&cur.items&&(cur.items.find(x=>x.k===q[0])||cur.items[i]);return{k:q[0],q:q[1],h:q[2],r:o?o.r:null,d:o?o.d||'':'',n:o?o.n||'':'',ph:o&&o.ph?[...o.ph]:[],e:''}}),note:cur&&cur.note||'',proof:cur&&cur.proof?[...cur.proof]:[],proofT:cur&&cur.proofT?[...cur.proofT]:[],pe:'',saved:cur?cur.at:null};
+  S.from=S.v;S.rev=false;go('insp');
+}
+let dT;function draftSoon(){if(S.ins&&!S.ins.edit){clearTimeout(dT);dT=setTimeout(saveDraft,1500)}}
+async function saveDraft(){
+  const x=S.ins;if(!x||x.edit)return;const cur=I.get(x.id);if(cur&&cur.status!=='draft')return;
+  const t=tk(x.c);
+  try{await wq(()=>DB.doc('insp/'+x.id).set({round:x.round,c:x.c,z:t.z,t:t.t,l:t.l,dept:x.dept,emp:x.emp,uid:ME.id,status:'draft',items:x.items.map(({k,q,r,d,n,ph})=>({k,q,r,d,n,ph})),note:(x.note||'').trim(),proof:x.proof,proofT:x.proofT,at:nowISO(),sub:null}));x.saved=nowISO();render()}catch(e){toast(errMsg(e))}
+}
+function validate(){
+  let bad=0;const x0=S.ins;x0.pe=!AS?'บัญชีนี้แนบรูปไม่ได้ จึงส่งผลตรวจไม่ได้ ติดต่อผู้ดูแลระบบให้เพิ่มสิทธิ์':!x0.proof.length?'ถ่ายรูปยืนยันการตรวจอย่างน้อย 1 รูป':'';if(x0.pe)bad++;S.ins.items.forEach(x=>{x.e=!x.r?'เลือกผลการตรวจ':x.r==='FAIL'&&!x.d.trim()?'ระบุรายละเอียดความผิดปกติ':x.r==='FAIL'&&!x.ph.length?'ถ่ายรูปหลักฐานอย่างน้อย 1 รูป':x.r==='NA'&&!x.n.trim()?'ระบุเหตุผลที่ไม่เกี่ยวข้อง':'';if(x.e)bad++});
+  S.err=bad?`ยังกรอกไม่ครบ ${bad} ข้อ ดูข้อความสีแดงในแต่ละข้อ`:'';return !bad;
+}
+async function submit(){
+  const x=S.ins,t=tk(x.c),M=x.round===R?I:(OI[x.round]||new Map()),prev=M.get(x.id);
+  const fails=x.items.filter(i=>i.r==='FAIL'),status=fails.length?'defect':'ok';
+  clearTimeout(dT);S.busy='กำลังส่งผลตรวจ…';render();
+  try{
+    const doc={round:x.round,c:x.c,z:t.z,t:t.t,l:t.l,dept:x.dept,emp:x.emp,uid:prev&&prev.uid||ME.id,status,items:x.items.map(({k,q,r,d,n,ph})=>({k,q,r,d,n,ph})),note:(x.note||'').trim(),proof:x.proof,proofT:x.proofT,at:prev&&prev.at||nowISO(),sub:x.edit&&prev&&prev.sub?prev.sub:nowISO()};
+    if(x.edit){doc.editBy=actor();doc.editAt=nowISO()}
+    await wq(()=>DB.doc('insp/'+x.id).set(doc));
+    let nf=0;
+    for(const f of fails){if(D.some(d=>d.ins===x.id&&d.k===f.k&&d.s!=='CLOSED'))continue;const n=nowISO();await wq(()=>DB.collection('defects').add({ins:x.id,c:x.c,round:x.round,k:f.k,q:f.q,tx:f.d,ph:f.ph,s:'OPEN',who:'',act:'',aph:[],by:x.emp,dept:x.dept,uid:ME.id,at:n,upd:n,log:[{s:'OPEN',at:n,by:x.emp}]}));nf++}
+    if(x.round!==R)delete OI[x.round];delete H[x.c];
+    S.busy='';const wasEdit=x.edit;S.ins=null;S.rev=false;
+    if(wasEdit&&S.mode==='office'){S.a=x.id;go('idet');toast('บันทึกการแก้ไขผลตรวจแล้ว')}else{S.done={c:x.c,nf,fail:fails.length};go('done')}
+  }catch(e){S.busy='';toast(errMsg(e))}
+}
+
+/* ---------- defects ---------- */
+async function dUpd(id,patch,logS){
+  const d=D.find(x=>x.id===id);if(!d)return;const n=nowISO();const p={...patch,upd:n};
+  if(logS)p.log=[...(d.log||[]),{s:logS,at:n,by:actor()}];
+  try{await wq(()=>DB.doc('defects/'+id).update(p))}catch(e){toast(errMsg(e))}
+}
+
+/* ---------- exports ---------- */
+async function save(name,data){
+  if(!DL){toast('หน้านี้ดาวน์โหลดไฟล์ไม่ได้ในมุมมองนี้');return}
+  try{await DL.save({filename:name,data});toast('ส่งไฟล์ให้บันทึกแล้ว')}catch(e){if(e&&e.code==='declined')return;toast(e&&e.code==='rate_limited'?'มีหน้าต่างบันทึกไฟล์เปิดอยู่แล้ว':'บันทึกไฟล์ไม่สำเร็จ')}
+}
+const proofLate=x=>!!x&&!!x.sub&&(x.proofT||[]).some(t=>new Date(x.sub)-new Date(t)>2*36e5);
+const stTxt=s=>s==='ok'?'ปกติ':s==='defect'?'พบข้อบกพร่อง':s==='draft'?'กำลังตรวจ':'ยังไม่ตรวจ';
+async function xRound(r){
+  S.busy='กำลังสร้างไฟล์ Excel…';render();
+  try{
+    const M=await ensureRound(r);await lib('xlsx');const X=window.XLSX,wb=X.utils.book_new(),ts=actT();
+    const z=zoneStats(ts,M,r);
+    const sum=[[`FEMS · รายงานผลตรวจถังดับเพลิงประจำเดือน ${rLabel(r)}`],[`สร้างเมื่อ ${fdt(nowISO())}`],[],['พื้นที่','ถังทั้งหมด','ตรวจแล้ว','ปกติ','พบข้อบกพร่อง','ยังไม่ตรวจ','ร้อยละที่ตรวจ']];
+    z.forEach(a=>sum.push([a.name,a.n,a.ok+a.df,a.ok,a.df,a.n-a.ok-a.df,a.n?Math.round((a.ok+a.df)/a.n*100):0]));
+    const tot=z.reduce((s,a)=>({n:s.n+a.n,ok:s.ok+a.ok,df:s.df+a.df}),{n:0,ok:0,df:0});
+    sum.push(['รวม',tot.n,tot.ok+tot.df,tot.ok,tot.df,tot.n-tot.ok-tot.df,tot.n?Math.round((tot.ok+tot.df)/tot.n*100):0]);
+    const s1=X.utils.aoa_to_sheet(sum);s1['!cols']=[{wch:30},{wch:11},{wch:10},{wch:8},{wch:13},{wch:11},{wch:13}];X.utils.book_append_sheet(wb,s1,'สรุป');
+    const det=[['รหัสถัง','สถานที่','พื้นที่','ชนิด','ขนาด (lb)','Fire Rating','ปีผลิต','ครบอายุ (พ.ศ.)','สถานะ','ผู้ตรวจ','หน่วยงาน','วันที่ส่งผล','รูปยืนยัน (รูป)',...SHORT.map((s,i)=>`${i+1}. ${s}`),'รายละเอียดที่ผิดปกติ / เหตุผล','หมายเหตุ']];
+    ts.forEach(t=>{const x=M.get(r+'_'+t.c),st=x&&x.status;const it=x&&x.items||[];det.push([t.c,t.l,zn(t),t.t,t.sz||'',t.fr||'',t.m||'',exp(t)||'',stTxt(st),x?x.emp:'',x?x.dept:'',x&&x.sub?fdt(x.sub):'',x&&st!=='draft'?(x.proof||[]).length:'',...SHORT.map((_,i)=>it[i]&&it[i].r?RES[it[i].r]:''),it.filter(i=>i.r==='FAIL'||i.r==='NA').map(i=>`${i.q}: ${i.r==='FAIL'?i.d:i.n}`).join(' | '),x&&st!=='draft'?x.note||'':''])});
+    const s2=X.utils.aoa_to_sheet(det);s2['!cols']=[{wch:10},{wch:34},{wch:22},{wch:10},{wch:8},{wch:10},{wch:7},{wch:11},{wch:14},{wch:22},{wch:14},{wch:16},{wch:12},...SHORT.map(()=>({wch:11})),{wch:50},{wch:40}];X.utils.book_append_sheet(wb,s2,'ผลตรวจรายถัง');
+    const dd=[['รหัสถัง','สถานที่','หัวข้อ','ปัญหาที่พบ','ผู้ตรวจพบ','วันที่พบ','สถานะ','ผู้รับผิดชอบ','วิธีแก้ไข','อัปเดตล่าสุด']];
+    D.filter(d=>d.round===r).forEach(d=>{const t=tk(d.c)||{};dd.push([d.c,t.l||'',d.q,d.tx,d.by,fd(d.at),DST[d.s][0],d.who||'',d.act||'',fdt(d.upd)])});
+    const s3=X.utils.aoa_to_sheet(dd);s3['!cols']=[{wch:10},{wch:30},{wch:30},{wch:40},{wch:22},{wch:12},{wch:16},{wch:22},{wch:36},{wch:16}];X.utils.book_append_sheet(wb,s3,'ข้อบกพร่อง');
+    const buf=X.write(wb,{bookType:'xlsx',type:'array'});S.busy='';render();
+    await save(`ผลตรวจถังดับเพลิง_${r}.xlsx`,new Blob([buf]));
+  }catch(e){S.busy='';toast('สร้างไฟล์ไม่สำเร็จ ลองใหม่')}
+}
+async function xTanks(){
+  S.busy='กำลังสร้างไฟล์ Excel…';render();
+  try{await lib('xlsx');const X=window.XLSX,wb=X.utils.book_new();
+    const a=[['รหัสถัง','สถานที่','พื้นที่','ชนิด','ขนาด (lb)','ชนิดการดับเพลิง','Fire Rating','ปีผลิต (พ.ศ.)','ครบอายุ (พ.ศ.)','สถานะอายุ','ใช้งาน','หมายเหตุ']];
+    [...T.values()].sort(byCode).forEach(t=>{const b=bk(t);a.push([t.c,t.l,zn(t),t.t,t.sz||'',t.cls||'',t.fr||'',t.m||'',exp(t)||'',b==='EXPIRED'?'ครบอายุแล้ว':b==='D90'?'ครบภายใน 90 วัน':b==='Y1'?'ครบภายใน 1 ปี':b?'':'ไม่มีปีผลิต',t.active===false?'เลิกใช้':'ใช้งาน',t.note||''])});
+    const s=X.utils.aoa_to_sheet(a);s['!cols']=[{wch:10},{wch:40},{wch:24},{wch:10},{wch:9},{wch:14},{wch:11},{wch:12},{wch:13},{wch:16},{wch:8},{wch:30}];X.utils.book_append_sheet(wb,s,'ทะเบียนถัง');
+    const buf=X.write(wb,{bookType:'xlsx',type:'array'});S.busy='';render();await save('ทะเบียนถังดับเพลิง.xlsx',new Blob([buf]));
+  }catch(e){S.busy='';toast('สร้างไฟล์ไม่สำเร็จ ลองใหม่')}
+}
+async function xDefects(){
+  S.busy='กำลังสร้างไฟล์ Excel…';render();
+  try{await lib('xlsx');const X=window.XLSX,wb=X.utils.book_new();
+    const a=[['รหัสถัง','สถานที่','พื้นที่','รอบตรวจ','หัวข้อ','ปัญหาที่พบ','ผู้ตรวจพบ','วันที่พบ','สถานะ','ผู้รับผิดชอบ','วิธีแก้ไข','อัปเดตล่าสุด']];
+    [...D].sort((x,y)=>x.at<y.at?1:-1).forEach(d=>{const t=tk(d.c)||{};a.push([d.c,t.l||'',t.z?zn(t):'',rLabel(d.round),d.q,d.tx,d.by,fd(d.at),DST[d.s][0],d.who||'',d.act||'',fdt(d.upd)])});
+    const s=X.utils.aoa_to_sheet(a);s['!cols']=[{wch:10},{wch:30},{wch:20},{wch:16},{wch:30},{wch:40},{wch:22},{wch:12},{wch:16},{wch:22},{wch:36},{wch:16}];X.utils.book_append_sheet(wb,s,'ข้อบกพร่อง');
+    const buf=X.write(wb,{bookType:'xlsx',type:'array'});S.busy='';render();await save('ข้อบกพร่องถังดับเพลิง.xlsx',new Blob([buf]));
+  }catch(e){S.busy='';toast('สร้างไฟล์ไม่สำเร็จ ลองใหม่')}
+}
+function zoneStats(ts,M,r){const z={};ts.forEach(t=>{const a=z[t.z]||(z[t.z]={k:t.z,name:zn(t),n:0,ok:0,df:0,dr:0});a.n++;const s=stOf(M,r,t.c);s==='ok'?a.ok++:s==='defect'?a.df++:s==='draft'&&a.dr++});return ZORD.filter(k=>z[k]).map(k=>z[k]).concat(Object.keys(z).filter(k=>!ZORD.includes(k)).map(k=>z[k]))}
+async function pdfRound(r){
+  S.busy='กำลังสร้างรายงาน PDF…';render();
+  try{
+    const M=await ensureRound(r);await lib('h2p');await document.fonts.ready;
+    const ts=actT(),z=zoneStats(ts,M,r),tot=z.reduce((s,a)=>({n:s.n+a.n,ok:s.ok+a.ok,df:s.df+a.df}),{n:0,ok:0,df:0});
+    const notDone=ts.filter(t=>{const s=stOf(M,r,t.c);return s!=='ok'&&s!=='defect'});
+    const defs=D.filter(d=>d.round===r);const exps=ts.filter(t=>bk(t)==='EXPIRED'||bk(t)==='D90');
+    const th='style="border:1px solid #999;padding:4px 6px;background:#eee;text-align:left;font-size:11px"',td='style="border:1px solid #999;padding:4px 6px;font-size:11px;vertical-align:top"',tdn='style="border:1px solid #999;padding:4px 6px;font-size:11px;text-align:right"';
+    const h=`<div style="font-family:'IBM Plex Sans Thai',sans-serif;color:#111;padding:28px 34px;width:794px;box-sizing:border-box;line-height:1.5">
+<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #c22d1a;padding-bottom:8px"><div><div style="font-size:12px;letter-spacing:.06em;color:#555">FEMS · Fire Extinguisher Management System</div><div style="font-family:'Bai Jamjuree',sans-serif;font-size:20px;font-weight:700">รายงานผลการตรวจสอบถังดับเพลิงประจำเดือน</div><div style="font-size:13px">รอบ ${esc(rLabel(r))}</div></div><div style="font-size:11px;text-align:right">พิมพ์เมื่อ ${esc(fdt(nowISO()))}</div></div>
+<p style="font-size:13px;margin:12px 0 6px">ถังที่ใช้งาน <b>${tot.n}</b> ถัง · ตรวจแล้ว <b>${tot.ok+tot.df}</b> ถัง (${tot.n?Math.round((tot.ok+tot.df)/tot.n*100):0}%) · ปกติ <b>${tot.ok}</b> · พบข้อบกพร่อง <b>${tot.df}</b> · ยังไม่ตรวจ <b>${tot.n-tot.ok-tot.df}</b></p>
+<div style="font-weight:600;font-size:13px;margin:12px 0 4px">1. สรุปตามพื้นที่</div>
+<table style="border-collapse:collapse;width:100%"><tr><th ${th}>พื้นที่</th><th ${th}>ทั้งหมด</th><th ${th}>ปกติ</th><th ${th}>พบข้อบกพร่อง</th><th ${th}>ยังไม่ตรวจ</th><th ${th}>ร้อยละที่ตรวจ</th></tr>${z.map(a=>`<tr><td ${td}>${esc(a.name)}</td><td ${tdn}>${a.n}</td><td ${tdn}>${a.ok}</td><td ${tdn}>${a.df}</td><td ${tdn}>${a.n-a.ok-a.df}</td><td ${tdn}>${a.n?Math.round((a.ok+a.df)/a.n*100):0}%</td></tr>`).join('')}</table>
+<div style="font-weight:600;font-size:13px;margin:14px 0 4px">2. ข้อบกพร่องที่พบในรอบนี้ (${defs.length} รายการ)</div>
+${defs.length?`<table style="border-collapse:collapse;width:100%"><tr><th ${th}>รหัสถัง</th><th ${th}>สถานที่</th><th ${th}>ปัญหาที่พบ</th><th ${th}>สถานะ</th><th ${th}>ผู้รับผิดชอบ / วิธีแก้ไข</th></tr>${defs.map(d=>{const t=tk(d.c)||{};return `<tr><td ${td}>${esc(d.c)}</td><td ${td}>${esc(t.l||'')}</td><td ${td}><b>${esc(d.q)}</b><br>${esc(d.tx)}</td><td ${td}>${esc(DST[d.s][0])}</td><td ${td}>${esc(d.who||'-')}<br>${esc(d.act||'')}</td></tr>`}).join('')}</table>`:'<p style="font-size:12px">ไม่พบข้อบกพร่อง</p>'}
+<div style="font-weight:600;font-size:13px;margin:14px 0 4px">3. ถังที่ยังไม่ได้ตรวจ (${notDone.length} ถัง)</div>
+<p style="font-size:11px;margin:0">${notDone.length?notDone.map(t=>`${esc(t.c)} ${esc(t.l)}`).join(' · '):'ตรวจครบทุกถัง'}</p>
+<div style="font-weight:600;font-size:13px;margin:14px 0 4px">4. ถังที่ครบอายุแล้วหรือครบภายใน 90 วัน (${exps.length} ถัง)</div>
+<p style="font-size:11px;margin:0">${exps.length?exps.map(t=>`${esc(t.c)} (ครบอายุ ${exp(t)})`).join(' · '):'-'}</p>
+<p style="font-size:10px;color:#555;margin-top:8px">อายุถังคำนวณจากปีผลิต + ${life()} ปี ตามทะเบียน ควรยืนยันกับเกณฑ์ของผู้ผลิตและขั้นตอนความปลอดภัยของโรงงาน</p>
+<div style="display:flex;justify-content:space-around;margin-top:46px;font-size:12px;text-align:center"><div>ลงชื่อ ..........................................<br>ผู้รวบรวมรายงาน<br>วันที่ ........./........./.........</div><div>ลงชื่อ ..........................................<br>เจ้าหน้าที่ความปลอดภัย (จป.)<br>วันที่ ........./........./.........</div></div></div>`;
+    const st=document.createElement('div');st.id='pdfstage';st.innerHTML=h;document.body.appendChild(st);
+    const blob=await window.html2pdf().set({margin:[6,0,8,0],image:{type:'jpeg',quality:.95},html2canvas:{scale:2,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy'],avoid:'tr'}}).from(st.firstElementChild).outputPdf('blob');
+    st.remove();S.busy='';render();await save(`รายงานตรวจถังดับเพลิง_${r}.pdf`,blob);
+  }catch(e){const st=$('#pdfstage');st&&st.remove();S.busy='';toast('สร้าง PDF ไม่สำเร็จ ลองใหม่')}
+}
+function segWords(s){let w;try{if(window.Intl&&Intl.Segmenter)w=[...new Intl.Segmenter('th',{granularity:'word'}).segment(s)].map(x=>x.segment)}catch(e){}if(!w)w=[...s];const o=[];for(const g of w){const p=o[o.length-1];if(p!=null&&/^[\x21-\x7e]+$/.test(g)&&/[\x21-\x7e]$/.test(p)&&!/\s$/.test(p))o[o.length-1]=p+g;else o.push(g)}return o}
+function wrapText(cx,s,maxW,maxLines){const w=segWords(s),lines=[];let cur='';for(const p of w){if(cx.measureText(cur+p).width>maxW&&cur){lines.push(cur.trim());cur=p.trimStart();if(lines.length===maxLines)break}else cur+=p}if(lines.length<maxLines&&cur.trim())lines.push(cur.trim());else if(lines.length===maxLines&&cur){lines[maxLines-1]=lines[maxLines-1].replace(/.{0,1}$/,'…')}return lines}
+const selfUrl=()=>CFG.baseUrl||(window.claude&&window.claude.selfUrl)||'';
+const qrData=t=>selfUrl()?selfUrl().replace(/#.*$/,'')+'#'+t.c:t.c;
+function drawLabel(cx,x,y,lw,lh,t,cut){
+  const pad=14;
+  if(cut){cx.setLineDash([8,6]);cx.strokeStyle='#999';cx.lineWidth=1.5;cx.strokeRect(x,y,lw,lh);cx.setLineDash([])}
+  cx.fillStyle='#c22d1a';cx.fillRect(x+pad,y+pad,lw-2*pad,46);
+  cx.fillStyle='#fff';cx.font='700 24px "Bai Jamjuree",sans-serif';cx.textBaseline='middle';cx.textAlign='left';cx.fillText('ถังดับเพลิง',x+pad+12,y+pad+24);
+  cx.textAlign='right';cx.font='600 15px "IBM Plex Sans Thai",sans-serif';cx.fillText('FIRE EXTINGUISHER',x+lw-pad-12,y+pad+24);cx.textAlign='left';
+  const qrS=150,qx=x+pad,qy=y+pad+62;
+  const q=window.qrcode(0,'M');q.addData(qrData(t));q.make();const n=q.getModuleCount(),cs=qrS/(n+2);
+  cx.fillStyle='#000';for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))cx.fillRect(qx+(c+1)*cs,qy+(r+1)*cs,Math.ceil(cs),Math.ceil(cs));
+  const tx=qx+qrS+12,tw=x+lw-pad-tx;
+  const fit=(txt,yy,w,size,min,fam)=>{let f=size;cx.font=`${w} ${f}px ${fam}`;while(f>min&&cx.measureText(txt).width>tw){f-=1;cx.font=`${w} ${f}px ${fam}`}cx.fillText(txt,tx,yy,tw)};
+  const TH='"IBM Plex Sans Thai",sans-serif';
+  cx.textBaseline='top';cx.fillStyle='#111';fit(t.c,qy+2,600,30,18,'"IBM Plex Mono",monospace');
+  cx.font=`500 18px ${TH}`;const ls=wrapText(cx,t.l,tw,3);ls.forEach((ln,j)=>fit(ln,qy+42+j*24,500,18,13,TH));
+  cx.fillStyle='#444';let yy=qy+42+Math.max(2,ls.length)*24+8;
+  fit(`${t.t}${t.sz?' · '+t.sz+' lb':''}`,yy,500,15,11,TH);yy+=20;
+  if(t.fr){fit(`Rating ${t.fr}`,yy,500,15,11,TH);yy+=20}
+  if(t.m)fit(`ผลิต ${t.m} · ครบอายุ ${exp(t)}`,yy,500,15,11,TH);
+  cx.fillStyle='#111';cx.font='500 15px "IBM Plex Sans Thai",sans-serif';cx.fillText('สแกนเพื่อบันทึกผลตรวจประจำเดือน',x+pad,y+lh-pad-22);cx.textAlign='right';cx.fillStyle='#888';cx.font='600 14px "IBM Plex Mono",monospace';cx.fillText('FEMS',x+lw-pad,y+lh-pad-22);cx.textAlign='left';
+}
+const labelFonts=()=>Promise.all(['700 30px "Bai Jamjuree"','600 22px "IBM Plex Mono"','500 18px "IBM Plex Sans Thai"'].map(f=>document.fonts.load(f).catch(()=>{})));
+async function pdfQR(zone,list){
+  const ts=list||actT().filter(t=>!zone||t.z===zone);if(!ts.length){toast('ไม่มีถังตามตัวกรองนี้');return}
+  S.busy=`กำลังสร้างป้าย QR ${ts.length} ป้าย…`;render();
+  try{
+    await Promise.all([lib('qr'),lib('jspdf')]);await labelFonts();
+    const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+    const PX=1240/210,W=1240,Hh=1754,mg=10*PX,cols=3,rowsN=5,lw=(W-2*mg)/cols,lh=(Hh-2*mg)/rowsN,per=cols*rowsN;
+    for(let p=0;p<ts.length;p+=per){
+      if(p)pdf.addPage();
+      const cv=document.createElement('canvas');cv.width=W;cv.height=Hh;const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,W,Hh);
+      ts.slice(p,p+per).forEach((t,i)=>drawLabel(cx,mg+(i%cols)*lw,mg+Math.floor(i/cols)*lh,lw,lh,t,true));
+      pdf.addImage(cv.toDataURL('image/jpeg',.92),'JPEG',0,0,210,297);
+    }
+    const blob=pdf.output('blob');S.busy='';render();await save(`ป้าย QR ถังดับเพลิง${zone?'_'+zone:''}.pdf`,blob);
+  }catch(e){S.busy='';toast('สร้างป้าย QR ไม่สำเร็จ ลองใหม่')}
+}
+async function pngQR(c){
+  const t=tk(c);if(!t)return;S.busy='กำลังสร้างป้าย '+c+'…';render();
+  try{await lib('qr');await labelFonts();const lw=391,lh=327,sc=3,cv=document.createElement('canvas');cv.width=lw*sc;cv.height=lh*sc;const cx=cv.getContext('2d');cx.scale(sc,sc);cx.fillStyle='#fff';cx.fillRect(0,0,lw,lh);drawLabel(cx,0,0,lw,lh,t,false);
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));S.busy='';render();await save(`QR_${c}.png`,blob)}
+  catch(e){S.busy='';toast('สร้างรูป QR ไม่สำเร็จ ลองใหม่')}
+}
+function qrSvg(t){if(!window.qrcode)return '';const q=window.qrcode(0,'M');q.addData(qrData(t));q.make();return q.createSvgTag({cellSize:4,margin:2,scalable:true})}
+
+/* ---------- views ---------- */
+function header(){
+  const adm=isAdmin();
+  const nav=S.mode==='office'?[['osum','สรุปผล'],['ores','ผลตรวจ'],['defects','ข้อบกพร่อง'],['oexp','แผนเปลี่ยนถัง'],['otank','ทะเบียนถัง'],['oqr','คิวอาร์โค้ด'],['oemp','พนักงาน'],['oexport','ส่งออก'],['oset','ตั้งค่า']]:[['home','หน้าแรก'],['check','ตรวจถัง'],['reg','ข้อมูลถัง']];
+  const map={done:'check',hview:'reg',tank:'reg',insp:S.mode==='office'?'ores':'check',defect:'defects',idet:'ores',tedit:'otank'};const on=map[S.v]||S.v;
+  return `<header class="hd"><div class="hd-in"><div class="brand"><span class="mark" aria-hidden="true"></span><span class="bn"><b>FEMS</b><span class="bt">ระบบบริหารจัดการและตรวจสอบถังดับเพลิง</span></span><span class="who">รอบ ${esc(rLabel(R))}</span><span class="seg" role="tablist" aria-label="โหมด"><button class="${S.mode==='field'?'on':''}" data-a="mode" data-m="field">หน้างาน</button><button class="${S.mode==='office'?'on':''}" data-a="mode" data-m="office">${adm?'หลังบ้าน':'<svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true" style="margin-right:4px;vertical-align:-1px"><rect x="1" y="5" width="9" height="7" rx="1.5" fill="currentColor"/><path d="M3 5V3.5a2.5 2.5 0 0 1 5 0V5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>หลังบ้าน'}</button></span>${UNLOCK&&!OWNER&&S.mode==='office'?'<button class="back" style="margin-left:4px" data-a="lock">ออกจากหลังบ้าน</button>':''}</div><nav class="nav">${nav.map(n=>`<button class="${on===n[0]?'on':''}" data-a="nav" data-v="${n[0]}">${n[1]}</button>`).join('')}</nav></div></header>`;
+}
+function identCard(){
+  const deps=allEmp();const pp=S.dept&&CFG.emp[S.dept]?CFG.emp[S.dept]:[];
+  if(S.emp&&!S.editIdent)return `<div class="card"><div class="acts"><div style="flex:1;min-width:0"><div class="sub">ผู้ตรวจ</div><b>${esc(S.emp)}</b> <span class="sub">· ${esc(S.dept)}</span></div><button class="btn q sm" data-a="identEdit">เปลี่ยนชื่อผู้ตรวจ</button></div></div>`;
+  return `<div class="card"><h3>ผู้ตรวจ</h3><p class="lead">เลือกครั้งเดียว ระบบจำไว้ในเครื่องนี้</p><div class="row2" style="margin-top:8px"><label class="fld">หน่วยงาน<select id="i-dept" class="in" data-in="dept"><option value="">เลือกหน่วยงาน</option>${deps.map(([d])=>`<option${S.dept===d?' selected':''}>${esc(d)}</option>`).join('')}</select></label><label class="fld">ชื่อผู้ตรวจ<select id="i-emp" class="in" data-in="emp" ${S.dept?'':'disabled'}><option value="">${S.dept?`เลือกชื่อ (${pp.length} คน)`:'เลือกหน่วยงานก่อน'}</option>${pp.map(n=>`<option${S.emp===n?' selected':''}>${esc(n)}</option>`).join('')}</select></label></div></div>`;
+}
+function qres(){
+  const q=S.q.trim().toLowerCase();if(!q)return '';
+  const r=actT().filter(t=>(t.c+' '+t.l+' '+t.t+' '+zn(t)).toLowerCase().includes(q)).slice(0,8);
+  return `<div class="list" style="margin-top:8px">${r.map(t=>`<button class="li band b-${stOf(I,R,t.c)||'none'}" data-a="tank" data-c="${esc(t.c)}">${tagC(t.c)}<span class="grow">${esc(t.l)}<div class="sub">${esc(zn(t))} · ${esc(t.t)}</div></span>${stPill(stOf(I,R,t.c))}</button>`).join('')||'<div class="empty">ไม่พบถังที่ตรงกับคำค้น</div>'}</div>`;
+}
+function pickBox(){
+  const ts=actT(),zs=ZORD.filter(z=>ts.some(t=>t.z===z)),t=S.pick&&tk(S.pick),st=t?stOf(I,R,t.c):null,done=st==='ok'||st==='defect';
+  const mark=c=>{const x=stOf(I,R,c);return x==='ok'?'✓ ':x==='defect'?'⚠ ':x==='draft'?'… ':''};
+  return `<label class="fld" style="margin-top:12px">หรือเลือกถังจากรายการ<select id="pick" class="in" data-in="pick"><option value="">เลือกถัง (${ts.length} ใบ · ✓ ตรวจแล้ว)</option>${zs.map(z=>`<optgroup label="${esc(ZN[z])}">${ts.filter(x=>x.z===z).map(x=>`<option value="${esc(x.c)}"${S.pick===x.c?' selected':''}>${mark(x.c)}${esc(x.c)} — ${esc(x.t)} — ${esc(x.l)}</option>`).join('')}</optgroup>`).join('')}</select></label>
+${t?`<div class="pickc"><div class="acts">${tagC(t.c)}${stPill(st)}</div><b style="display:block;margin-top:6px">${esc(t.l)}</b><div class="sub">${esc(zn(t))} · ${esc(t.t)}${spec(t)?' · '+esc(spec(t)):''}${t.m?' · ผลิต '+t.m:''}</div><div class="acts" style="margin-top:10px">${done?`<span class="sub">เดือนนี้ตรวจแล้ว</span>`:S.emp?`<button class="btn f" data-a="start" data-c="${esc(t.c)}">${st==='draft'?'ทำแบบตรวจต่อ':'เริ่มตรวจถังนี้'}</button>`:`<span class="err">เลือกชื่อผู้ตรวจก่อนจึงจะเริ่มตรวจได้</span>`}<button class="btn q" data-a="tank" data-c="${esc(t.c)}">ดูข้อมูลถัง</button></div></div>`:''}`;
+}
+function zoneChart(zs){
+  const seg=(k,v,n,a)=>v?`<span class="hb s-${k}" style="flex:${v} 0 0" data-tip="${esc(ZN[a.z])}|${esc({ok:'ปกติ',defect:'พบข้อบกพร่อง',draft:'กำลังตรวจ',none:'ยังไม่ตรวจ'}[k])}|${v} ถัง (${Math.round(v/n*100)}%)"></span>`:'';
+  return `<div class="hc" role="table" aria-label="ร้อยละที่ตรวจแยกตามพื้นที่"><div class="hc-ax" aria-hidden="true"><span></span><div class="hc-ticks">${[0,25,50,75,100].map(v=>`<i style="left:${v}%">${v}%</i>`).join('')}</div><span></span></div>
+${zs.map(a=>{const ok=a.d-a.f,none=a.n-a.d-a.r,p=a.n?Math.round(a.d/a.n*100):0,full=a.d===a.n;return `<button class="hr ${S.zf===a.z?'on':''}" role="row" data-a="zf" data-z="${S.zf===a.z?'':a.z}" aria-pressed="${S.zf===a.z}"><span class="hl" role="rowheader"><b>${esc(ZN[a.z])}</b><span class="sub">${a.d}/${a.n} ถัง${a.f?` · <span class="c-fire">⚠ ${a.f}</span>`:''}</span></span><span class="ht" role="cell">${seg('ok',ok,a.n,a)}${seg('defect',a.f,a.n,a)}${seg('draft',a.r,a.n,a)}${seg('none',none,a.n,a)}</span><span class="hp ${full?'c-ok':''}" role="cell">${full?'✓ ':''}${p}%</span></button>`}).join('')}</div>`;
+}
+function extSvg(){return `<svg class="ext" viewBox="0 0 120 190" aria-hidden="true"><defs><linearGradient id="exb" x1="0" x2="1"><stop offset="0" stop-color="#8f1d10"/><stop offset=".35" stop-color="#f05a3f"/><stop offset=".6" stop-color="#d0321e"/><stop offset="1" stop-color="#6e140a"/></linearGradient><linearGradient id="exm" x1="0" x2="1"><stop offset="0" stop-color="#3a4047"/><stop offset=".5" stop-color="#b3bcc4"/><stop offset="1" stop-color="#30353b"/></linearGradient></defs><path d="M24 62c0-16 14-24 34-24s34 8 34 24v112c0 7-5 11-11 11H35c-6 0-11-4-11-11z" fill="url(#exb)"/><rect x="48" y="20" width="20" height="20" rx="4" fill="url(#exm)"/><path d="M40 21h40l8-10H52z" fill="#262b31"/><path d="M70 14l34-10 3 7-33 11z" fill="#262b31"/><path d="M68 32c28 0 42 14 42 40v40" fill="none" stroke="#1d2126" stroke-width="7" stroke-linecap="round"/><rect x="104" y="108" width="12" height="24" rx="3" fill="#1d2126"/><rect x="34" y="84" width="48" height="56" rx="4" fill="#fff"/><rect x="34" y="84" width="48" height="10" rx="3" fill="#c22d1a"/><g fill="#1a2028"><rect x="39" y="99" width="17" height="17"/><rect x="60" y="100" width="18" height="3"/><rect x="60" y="106" width="14" height="3"/><rect x="60" y="112" width="16" height="3"/><rect x="39" y="122" width="38" height="3"/><rect x="39" y="128" width="28" height="3"/></g><rect x="42" y="102" width="11" height="11" fill="#fff"/><rect x="45" y="105" width="5" height="5" fill="#1a2028"/><path d="M34 52c3 6 7 9 12 10" stroke="#fff" stroke-width="3.5" opacity=".35" fill="none" stroke-linecap="round"/></svg>`}
+function heroStat(st){const m={ok:['#2b7a4c','✓','ตรวจแล้ว · ปกติ'],defect:['#c22d1a','!','ตรวจแล้ว · พบข้อบกพร่อง'],draft:['#b7791f','…','กำลังตรวจ (ร่าง)'],none:['#59636e','–','ยังไม่ได้ตรวจเดือนนี้']}[st||'none'];return `<span class="stat"><i style="background:${m[0]}">${m[1]}</i>${m[2]}</span>`}
+const V={};
+V.done=()=>{const d=S.done;if(!d)return V.check();const t=tk(d.c)||{l:'',z:''};
+  const nxt=actT().filter(x=>x.z===t.z&&x.c!==d.c&&!['ok','defect'].includes(stOf(I,R,x.c))).sort(byCode);const after=nxt.filter(x=>byCode(x,t)>0).concat(nxt.filter(x=>byCode(x,t)<0)).slice(0,3);
+  const left=actT().filter(x=>!['ok','defect'].includes(stOf(I,R,x.c))).length;
+  return `<div class="page"><div class="card done"><span class="ic ${d.fail?'f':''}" aria-hidden="true">${d.fail?'<svg width="34" height="34" viewBox="0 0 24 24"><path d="M12 3 2 21h20z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 10v5M12 18v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>':'<svg width="36" height="36" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'}</span>
+<h1>ส่งผลตรวจ ${esc(d.c)} แล้ว</h1><p class="sub" style="margin:0">${esc(t.l)}</p>
+${d.fail?`<p style="margin:0" class="c-fire"><b>พบความผิดปกติ ${d.fail} ข้อ</b> ระบบส่งต่อให้ผู้ดูแลติดตามการแก้ไขแล้ว</p>`:'<p style="margin:0">ทุกข้อปกติ ขอบคุณที่ช่วยตรวจ</p>'}
+<p class="sub" style="margin:0">เดือนนี้เหลืออีก ${left} ถัง</p>
+<div class="acts" style="justify-content:center;margin-top:6px"><button class="btn f" data-a="scan">สแกนถังถัดไป</button><button class="btn q" data-a="nav" data-v="check">กลับหน้าตรวจถัง</button></div></div>
+${after.length?`<div><div class="sec"><h2>ถังถัดไปในพื้นที่${esc(ZN[t.z]||'')}</h2><span class="sub">ยังไม่ได้ตรวจ</span></div><div class="list" style="margin-top:8px">${after.map(x=>`<button class="li" data-a="start" data-c="${esc(x.c)}">${tagC(x.c)}<span class="grow">${esc(x.l)}<div class="sub">${esc(x.t)}</div></span><span class="btn f sm">เริ่มตรวจ</span></button>`).join('')}</div></div>`:''}</div>`;
+};
+V.home=()=>{
+  const ts=actT(),n=ts.length;let ok=0,df=0,dr=0;ts.forEach(t=>{const s=stOf(I,R,t.c);s==='ok'?ok++:s==='defect'?df++:s==='draft'&&dr++});
+  const done=ok+df,left=n-done,pct=n?Math.round(done/n*100):0;
+  const b=bkk(),dim=new Date(Date.UTC(b.getUTCFullYear(),b.getUTCMonth()+1,0)).getUTCDate(),dLeft=dim-b.getUTCDate()+1,perDay=left?Math.ceil(left/dLeft):0;
+  const C=2*Math.PI*60,aOk=n?ok/n*C:0,aDf=n?df/n*C:0,aDr=n?dr/n*C:0;
+  const od=D.filter(d=>d.s==='OPEN'||d.s==='IN_PROGRESS').length,ex=ts.filter(t=>bk(t)==='EXPIRED').length,soon=ts.filter(t=>bk(t)==='D90').length;
+  const zs=ZORD.filter(z=>ts.some(t=>t.z===z)).map(z=>{const zt=ts.filter(t=>t.z===z);const zd=zt.filter(t=>{const s=stOf(I,R,t.c);return s==='ok'||s==='defect'}).length;const zf=zt.filter(t=>stOf(I,R,t.c)==='defect').length;const zr=zt.filter(t=>stOf(I,R,t.c)==='draft').length;return{z,n:zt.length,d:zd,f:zf,r:zr,ts:zt}});
+  const todo=ts.filter(t=>{const s=stOf(I,R,t.c);return s!=='ok'&&s!=='defect'&&(!S.zf||t.z===S.zf)}).sort((a,c)=>(stOf(I,R,c.c)==='draft')-(stOf(I,R,a.c)==='draft')||byCode(a,c));
+  const sh=todo.slice(0,S.lim);
+  return `<div class="page">
+<section class="dash" aria-label="ความคืบหน้าการตรวจเดือนนี้">
+  <div class="ring"><svg viewBox="0 0 148 148" width="148" height="148" aria-hidden="true"><circle cx="74" cy="74" r="60" fill="none" stroke="var(--slab-line)" stroke-width="14"/>${[[aOk,0,'--ok'],[aDf,aOk,'--fire'],[aDr,aOk+aDf,'--warn']].map(([a,o,c])=>a?`<circle cx="74" cy="74" r="60" fill="none" stroke="var(${c})" stroke-width="14" stroke-dasharray="${a} ${C-a}" stroke-dashoffset="${-o}" transform="rotate(-90 74 74)"/>`:'').join('')}</svg><b><span>${pct}%<small>${done} จาก ${n} ถัง</small></span></b></div>
+  <div><div class="eyebrow">รอบตรวจ ${esc(rLabel(R))}</div><h1>${pct>=100?'ตรวจครบทุกถังแล้ว':'ความคืบหน้าการตรวจประจำเดือน'}</h1>
+  <div class="kp"><div><span><i style="background:var(--ok)"></i>ปกติ</span><b>${ok}</b></div><div><span><i style="background:var(--fire)"></i>พบข้อบกพร่อง</span><b>${df}</b></div><div><span><i style="background:var(--warn)"></i>กำลังตรวจ</span><b>${dr}</b></div><div><span><i style="background:var(--slab-line)"></i>ยังไม่ตรวจ</span><b>${left-dr}</b></div></div>
+  <p class="pace">${left?`เหลือ <b>${dLeft} วัน</b> ถึงสิ้นเดือน · ต้องตรวจเฉลี่ย <b>วันละ ${perDay} ถัง</b> เพื่อให้ครบ ${n} ถัง`:'ขอบคุณทุกคนที่ช่วยกันตรวจ'}</p></div>
+</section>
+<section class="zp" aria-label="ความคืบหน้าแยกตามพื้นที่"><div class="zp-h"><div><h2>ความคืบหน้าแยกตามพื้นที่</h2><p class="sub" style="margin:2px 0 0">${S.zv==='pips'?'1 ช่อง = ถัง 1 ใบ · แตะช่องเพื่อเปิดถังนั้น':'ร้อยละของถังในแต่ละพื้นที่ · แตะแถวเพื่อดูถังที่เหลือ'}</p></div><div class="seg2" role="group" aria-label="รูปแบบการแสดง"><button class="${S.zv!=='pips'?'on':''}" data-a="zv" data-z="chart">กราฟ</button><button class="${S.zv==='pips'?'on':''}" data-a="zv" data-z="pips">รายถัง</button></div></div>
+<div class="lg" style="padding:0 16px 10px"><span><i class="sw s-ok"></i>ปกติ</span><span><i class="sw s-defect"></i>พบข้อบกพร่อง</span><span><i class="sw s-draft"></i>กำลังตรวจ</span><span><i class="sw s-none"></i>ยังไม่ตรวจ</span></div>
+${S.zv==='pips'?zs.map(a=>{const p=a.n?Math.round(a.d/a.n*100):0,full=a.d===a.n;return `<div class="zr ${S.zf===a.z?'on':''}"><button class="zr-name" data-a="zf" data-z="${S.zf===a.z?'':a.z}" aria-pressed="${S.zf===a.z}"><span class="zr-t">${esc(ZN[a.z])}${full?'<span class="ck" aria-label="ครบแล้ว">✓</span>':''}</span><span class="sub">ตรวจแล้ว ${a.d} จาก ${a.n}${a.f?` · <span class="c-fire">ข้อบกพร่อง ${a.f}</span>`:''}</span></button><b class="zr-p ${full?'c-ok':''}">${p}<small>%</small></b><div class="pips">${a.ts.map(t=>{const st=stOf(I,R,t.c)||'none';return `<button class="pip s-${st}" data-a="tank" data-c="${esc(t.c)}" title="${esc(t.c+' '+t.l)}" aria-label="${esc(t.c)} ${esc(stTxt(st))}"></button>`}).join('')}</div></div>`}).join(''):zoneChart(zs)}</section>
+${ex||soon?`<div class="alerts">${ex?`<button class="al" data-a="expGo"><b class="c-fire">${ex}</b><span><b style="font-size:15px;font-family:var(--f-body)">ถังครบอายุแล้ว</b><div class="sub">ตามทะเบียน ปีผลิต + ${life()} ปี</div></span></button>`:''}${soon?`<button class="al warn" data-a="expGo"><b class="c-warn">${soon}</b><span><b style="font-size:15px;font-family:var(--f-body)">ครบอายุภายใน 90 วัน</b><div class="sub">เตรียมแผนเปลี่ยนถัง</div></span></button>`:''}</div>`:''}
+<div class="cta"><div><h2>พร้อมตรวจถังแล้วหรือยัง</h2><p class="sub" style="margin:2px 0 0">${left?`เหลืออีก ${left} ถังในเดือนนี้`:'เดือนนี้ตรวจครบแล้ว'}${S.emp?` · ผู้ตรวจ ${esc(S.emp)}`:''}</p></div><div class="acts"><button class="btn q" data-a="scan">สแกน QR</button><button class="btn f" data-a="nav" data-v="check">ไปหน้าตรวจถัง ›</button></div></div>
+
+</div>`;
+};
+V.check=()=>{
+  const ts=actT(),n=ts.length;
+  const todo=ts.filter(t=>{const s=stOf(I,R,t.c);return s!=='ok'&&s!=='defect'&&(!S.zf||t.z===S.zf)}).sort((a,c)=>(stOf(I,R,c.c)==='draft')-(stOf(I,R,a.c)==='draft')||byCode(a,c));
+  const sh=todo.slice(0,S.lim),zs=ZORD.filter(z=>ts.some(t=>t.z===z));
+  return `<div class="page"><div><h1>ตรวจถังดับเพลิง</h1><p class="lead">รอบ ${esc(rLabel(R))} · สแกน QR ที่ถัง ค้นหา หรือเลือกจากรายการ</p></div>
+<button class="scan" data-a="scan"><span class="qi" aria-hidden="true"><i></i><i></i><i></i><i style="border-style:dotted"></i></span><span><b>สแกน QR ที่ถัง</b><span>เปิดกล้องถ่ายรูป QR แล้วเข้าแบบตรวจทันที</span></span></button>
+<div class="row2">${identCard()}<div class="card"><label class="fld">หรือค้นหาถัง<input id="q" class="in" data-in="q" value="${esc(S.q)}" placeholder="เช่น E-PD-12, ห้องไฟฟ้า, Co2" autocomplete="off"></label><div id="qres">${qres()}</div>${pickBox()}</div></div>
+<div class="chips">${[['','ทุกพื้นที่'],...zs.map(z=>[z,ZN[z]])].map(([z,l])=>`<button class="chip ${S.zf===z?'on':''}" data-a="zf" data-z="${z}">${esc(l)}</button>`).join('')}</div>
+<div><div class="sec"><h2>${S.zf?'ยังไม่ตรวจ · '+esc(ZN[S.zf]):'ถังที่ยังไม่ได้ตรวจ'}</h2><span class="sub">${todo.length} ถัง</span></div>
+<div class="list" id="todo" style="margin-top:8px">${grouped(todo,t=>`<button class="li band b-${stOf(I,R,t.c)||'none'}" data-a="tank" data-c="${esc(t.c)}">${tagC(t.c)}<span class="grow">${esc(t.l)}<div class="sub">${esc(zn(t))} · ${esc(t.t)}</div></span>${stOf(I,R,t.c)==='draft'?pill('warn','ร่างค้างไว้'):''}</button>`)||`<div class="empty">${n?'ตรวจครบทุกถังในพื้นที่นี้แล้ว':'ยังไม่มีข้อมูลถังในทะเบียน'}</div>`}</div></div></div>`;
+};
+V.reg=()=>{
+  const q=S.tq.toLowerCase(),r=actT().filter(t=>(!S.tz||t.z===S.tz)&&(!q||(t.c+' '+t.l+' '+t.t).toLowerCase().includes(q))),sh=r.slice(0,S.lim);
+  return `<div class="page"><div><h1>ข้อมูลถังดับเพลิง</h1><p class="lead">รายการถังทั้งหมด ค้นหาหรือกรองตามพื้นที่ แตะถังเพื่อดูรายละเอียด ประวัติการตรวจ และอายุถัง</p></div><div class="acts"><input id="tq" class="in" style="flex:1;min-width:200px" data-in="tq" value="${esc(S.tq)}" placeholder="รหัสถัง สถานที่ หรือชนิด" autocomplete="off"><select id="tz" class="in" style="width:auto" data-in="tz"><option value="">ทุกพื้นที่</option>${ZORD.map(z=>`<option value="${z}"${S.tz===z?' selected':''}>${esc(ZN[z])}</option>`).join('')}</select></div><div class="list" id="rl">${regRows(r,sh)}</div></div>`;
+};
+function zoneHead(z,list){const zt=list.filter(x=>x.z===z),all=actT().filter(x=>x.z===z),d=all.filter(x=>['ok','defect'].includes(stOf(I,R,x.c))).length,p=all.length?Math.round(d/all.length*100):0;return `<div class="li zhead"><span class="grow"><b>${esc(ZN[z]||z)}</b> <span class="sub">${zt.length} ถัง</span></span><span class="zprog"><span class="bar"><i style="width:${p}%;background:var(--ok)"></i></span><span class="sub">ตรวจแล้ว ${d}/${all.length}</span></span></div>`}
+function grouped(list,row){let z=null,out='';for(const t of list){if(t.z!==z){z=t.z;out+=zoneHead(z,list)}out+=row(t)}return out}
+function regRows(r,sh){return `<div class="li head">พบ ${r.length} ถัง</div>`+grouped(r,t=>{const b=bk(t);return `<button class="li band b-${stOf(I,R,t.c)||'none'}" data-a="tank" data-c="${esc(t.c)}">${tagC(t.c)}<span class="grow">${esc(t.l)}<div class="sub">${esc(zn(t))} · ${esc(t.t)}</div></span>${b==='EXPIRED'?pill('fire','ครบอายุ '+exp(t)):b==='D90'?pill('warn','ใกล้ครบอายุ'):''}${stPill(stOf(I,R,t.c))}</button>`})||'<div class="empty">ไม่พบถังที่ตรงกับคำค้น</div>'}
+V.tank=()=>{
+  const t=tk(S.a);if(!t)return `<div class="page"><button class="back" data-a="nav" data-v="home">← กลับ</button><div class="card">ไม่พบถังรหัส ${esc(S.a)}</div></div>`;
+  const x=I.get(R+'_'+t.c),s=x&&x.status,b=bk(t);loadHist(t.c);const h=Array.isArray(H[t.c])?H[t.c]:null;
+  const od=D.filter(d=>d.c===t.c&&d.s!=='CLOSED');
+  return `<div class="page"><button class="back" data-a="nav" data-v="${S.mode==='office'?'otank':'check'}">← กลับ</button>
+<section class="thero st-${s==='ok'||s==='defect'||s==='draft'?s:'none'}">${extSvg()}<div class="tx"><span class="code">${esc(t.c)}</span><h1>${esc(t.l)}</h1><span class="meta">${esc(zn(t))} · ${esc(t.t)}${t.sz?' · '+t.sz+' lb':''}${t.active===false?' · เลิกใช้งาน':''}</span></div>${heroStat(s)}</section>
+${b==='EXPIRED'||b==='D90'?`<div class="card flag"><b class="c-fire">${b==='EXPIRED'?'ถังนี้ครบอายุตามทะเบียนแล้ว (ปี '+exp(t)+')':'ถังนี้จะครบอายุภายในสิ้นปี '+exp(t)}</b><div class="sub">แจ้งผู้ดูแลเพื่อวางแผนเปลี่ยนถัง และยืนยันกับเกณฑ์ของผู้ผลิต</div></div>`:''}
+<div class="card"><div class="acts" style="justify-content:space-between"><h3>รอบ ${esc(rLabel(R))}</h3>${stPill(s)}</div>${x&&s!=='draft'?`<p class="sub" style="margin:6px 0 0">ตรวจโดย ${esc(x.emp)} (${esc(x.dept)}) · ${esc(fdt(x.sub))}</p>`:''}
+${(!S.emp||S.tpick===t.c)&&s!=='ok'&&s!=='defect'?`<div class="row2" style="margin-top:10px"><label class="fld">หน่วยงาน<select id="t-dept" class="in" data-in="dept"><option value="">เลือกหน่วยงาน</option>${allEmp().map(([d])=>`<option${S.dept===d?' selected':''}>${esc(d)}</option>`).join('')}</select></label><label class="fld">ชื่อผู้ตรวจ<select id="t-emp" class="in" data-in="emp" ${S.dept?'':'disabled'}><option value="">${S.dept?'เลือกชื่อ':'เลือกหน่วยงานก่อน'}</option>${(S.dept&&CFG.emp[S.dept]||[]).map(n=>`<option${S.emp===n?' selected':''}>${esc(n)}</option>`).join('')}</select></label></div><p class="sub" style="margin:8px 0 0">เลือกครั้งเดียว ครั้งต่อไปสแกน QR แล้วเข้าแบบตรวจได้ทันที</p>`:''}<div class="acts" style="margin-top:12px">${s==='ok'||s==='defect'?(isAdmin()?`<button class="btn q" data-a="idetOpen" data-id="${esc(R+'_'+t.c)}">ดูผลตรวจ</button>`:''):S.emp?`<button class="btn f" data-a="start" data-c="${esc(t.c)}">${s==='draft'?'ทำแบบตรวจต่อ':'เริ่มตรวจถังนี้'}</button>`:`<button class="btn f" disabled>เริ่มตรวจถังนี้</button><span class="sub">เลือกชื่อผู้ตรวจด้านบนก่อน</span>`}</div></div>
+${od.length&&isAdmin()?`<div class="list"><div class="li head">ข้อบกพร่องที่ยังไม่ปิดงาน</div>${od.map(d=>`<button class="li" data-a="defect" data-id="${esc(d.id)}"><span class="grow"><b>${esc(d.q)}</b><div class="sub">${esc(d.tx)}</div></span>${dpill(d.s)}</button>`).join('')}</div>`:''}
+<div class="card"><div class="kv"><div><span>ชนิด</span>${esc(t.t)}</div><div><span>ปีผลิต (พ.ศ.)</span>${t.m||'-'}</div><div><span>ครบอายุ (พ.ศ.)</span>${exp(t)||'-'}</div><div><span>พื้นที่</span>${esc(zn(t))}</div><div><span>ขนาด</span>${t.sz?t.sz+' lb':'-'}</div><div><span>ชนิดการดับเพลิง</span>${esc(t.cls||'-')}</div><div><span>Fire Rating</span>${esc(t.fr||'-')}</div></div>${t.note?`<p class="sub" style="margin:10px 0 0">หมายเหตุ: ${esc(t.note)}</p>`:''}</div>
+${isAdmin()?`<div class="card"><div class="acts" style="align-items:center"><div class="qbox" style="width:120px">${qrSvg(t)||(lib('qr').then(render).catch(()=>{}),'')}</div><div style="flex:1;min-width:160px"><h3>คิวอาร์โค้ดของถังนี้</h3><p class="sub" style="margin:4px 0 8px">สแกนแล้วเปิดแบบตรวจ ${esc(t.c)} ทันที</p><button class="btn q sm" data-a="qrPng" data-c="${esc(t.c)}">บันทึกป้ายเป็นรูป</button></div></div></div>`:''}
+<div class="list"><div class="li head">ประวัติการตรวจ <span class="sub" style="font-weight:400">· แตะเพื่อดูรายละเอียด</span></div>${h?h.slice(0,24).map(r=>`<button class="li band b-${esc(r.status)}" data-a="hist" data-c="${esc(t.c)}" data-id="${esc(r.id)}"><span class="grow"><b>${esc(rLabel(r.round))}</b><div class="sub">${esc(r.emp)} · ${esc(fdt(r.sub))}</div></span>${stPill(r.status)}<span aria-hidden="true" style="color:var(--mut);font-size:18px">›</span></button>`).join('')||'<div class="empty">ยังไม่มีประวัติการตรวจ</div>':'<div class="empty">กำลังโหลด…</div>'}</div></div>`;
+};
+V.hview=()=>{
+  const c=S.hc,t=tk(c)||{c,l:'',z:''};loadHist(c);const h=Array.isArray(H[c])?H[c]:null;const x=h&&h.find(r=>r.id===S.a);
+  const back=`<button class="back" data-a="tank" data-c="${esc(c)}">← ${esc(c)} ${esc(t.l)}</button>`;
+  if(!x)return `<div class="page">${back}<div class="card empty">${h?'ไม่พบผลตรวจนี้':'กำลังโหลด…'}</div></div>`;
+  const it=x.items||[],n=r=>it.filter(i=>i.r===r).length;
+  return `<div class="page">${back}
+<section class="thero st-${x.status==='defect'?'defect':'ok'}">${extSvg()}<div class="tx"><span class="code">${esc(c)}</span><h1>ผลตรวจรอบ ${esc(rLabel(x.round))}</h1><span class="meta">${esc(t.l||x.l||'')}${t.z?' · '+esc(zn(t)):''}</span></div>${heroStat(x.status)}</section>
+<div class="card"><div class="kv"><div><span>ผู้ตรวจ</span><b>${esc(x.emp)}</b></div><div><span>หน่วยงาน</span>${esc(x.dept||'-')}</div><div><span>วันและเวลาที่ตรวจ</span>${esc(fdt(x.sub))}</div><div><span>สรุปผล</span><b class="c-ok">ปกติ ${n('PASS')}</b>${n('FAIL')?` · <b class="c-fire">ไม่ปกติ ${n('FAIL')}</b>`:''}${n('NA')?` · ไม่เกี่ยวข้อง ${n('NA')}`:''}</div></div>${x.editAt?`<p class="sub" style="margin:10px 0 0">แก้ไขผลโดย ${esc(x.editBy)} · ${esc(fdt(x.editAt))}</p>`:''}</div>
+<div class="card"><h3>รูปยืนยันการตรวจ</h3>${(x.proof||[]).length?`<div class="phs" style="margin-top:8px">${x.proof.map(img).join('')}</div><p class="sub" style="margin:8px 0 0">แตะรูปเพื่อขยาย</p>`:'<p class="sub" style="margin:6px 0 0">ไม่มีรูป</p>'}</div>
+<div class="list"><div class="li head">รายการตรวจ ${it.length} ข้อ</div>${it.map((i,k)=>`<div class="li band b-${i.r==='PASS'?'ok':i.r==='FAIL'?'defect':'NA'}" style="cursor:default;align-items:flex-start"><span class="qn">${k+1}</span><span class="grow"><b>${esc(i.q)}</b>${i.r==='FAIL'?`<div class="c-fire">${esc(i.d)}</div>`:i.r==='NA'?`<div class="sub">เหตุผล: ${esc(i.n)}</div>`:''}${i.r==='FAIL'&&(i.ph||[]).length?`<div class="phs" style="margin-top:6px">${i.ph.map(img).join('')}</div>`:''}</span>${i.r?pill(i.r==='PASS'?'ok':i.r==='FAIL'?'fire':'mut',RES[i.r],i.r!=='NA'):pill('mut','ไม่ได้เลือก')}</div>`).join('')}</div>
+${x.note?`<div class="card"><h3>หมายเหตุจากผู้ตรวจ</h3><p style="margin:6px 0 0;white-space:pre-line">${esc(x.note)}</p></div>`:''}
+</div>`;
+};
+V.insp=()=>{
+  const x=S.ins;if(!x)return V.home();const t=tk(x.c);
+  if(S.rev){const f=x.items.filter(i=>i.r==='FAIL'),c=r=>x.items.filter(i=>i.r===r).length;
+    return `<div class="page"><div><h1>ตรวจสอบก่อนส่งผล</h1><p class="lead">${tagC(x.c)} ${esc(t.l)} · ผู้ตรวจ ${esc(x.emp)}</p></div><div class="tiles"><div class="tile k-ok" style="cursor:default"><span>ปกติ</span><b>${c('PASS')}</b></div><div class="tile k-fire" style="cursor:default"><span>ไม่ปกติ</span><b>${c('FAIL')}</b></div><div class="tile" style="cursor:default"><span>ไม่เกี่ยวข้อง</span><b>${c('NA')}</b></div></div>
+${(x.note||'').trim()?`<div class="card"><b>หมายเหตุ</b><p style="margin:6px 0 0;white-space:pre-line">${esc(x.note.trim())}</p></div>`:''}
+<div class="card"><b>รูปยืนยันการตรวจ ${x.proof.length} รูป</b><div class="phs" style="margin-top:6px">${x.proof.map(img).join('')}</div></div>
+${f.length?`<div class="card flag"><b class="c-fire">พบความผิดปกติ ${f.length} ข้อ</b><p class="sub">ระบบจะสร้างรายการติดตามการแก้ไขให้ ผู้รับผิดชอบต้องประเมินความพร้อมใช้งานของถังตามขั้นตอนความปลอดภัยของโรงงาน ระบบไม่ตัดสินเองว่าถังใช้งานต่อได้</p>${f.map(i=>`<p style="margin:8px 0 0"><b>${esc(i.q)}</b><br>${esc(i.d)}</p>`).join('')}</div>`:''}
+<div class="acts"><button class="btn q" data-a="redit">กลับไปแก้ไข</button><button class="btn f" data-a="submit">ยืนยันส่งผลตรวจ</button></div></div>`}
+  const unset=x.items.filter(i=>!i.r).length;
+  return `<div class="page"><button class="back" data-a="cancelIns">← ยกเลิก</button><div><div class="acts">${tagC(x.c)}<span class="sub">${esc(t.t)}${spec(t)?' · '+esc(spec(t)):''}${t.m?' · ผลิต '+t.m:''}</span></div><h1 style="margin-top:6px">${esc(t.l)}</h1><p class="lead">${esc(zn(t))} · ผู้ตรวจ <b>${esc(x.emp)}</b> (${esc(x.dept)}) · รอบ ${esc(rLabel(x.round))}${x.edit?' · <b class="c-warn">แก้ไขผลที่ส่งแล้ว</b>':x.saved?' · บันทึกร่างอัตโนมัติ '+esc(fdt(x.saved)):''}</p></div>
+${unset?`<div class="acts"><button class="btn q sm" data-a="allpass">ตั้งข้อที่ยังไม่เลือกเป็น "ปกติ" (${unset} ข้อ)</button></div>`:''}
+<div class="card" style="${x.pe?'border-color:var(--fire)':''}"><b><svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true" style="margin-right:6px;vertical-align:-1px"><path d="M5.5 1h5l1.2 2H14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2.3z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="7.5" r="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>รูปยืนยันการตรวจ (จำเป็น)</b><div class="sub">ถ่ายที่หน้าถังให้เห็นตัวถังและบัตร Tag ระบบจะประทับรหัสถัง วันเวลา และชื่อผู้ตรวจลงบนรูปอัตโนมัติ</div><div class="phs" style="margin-top:8px">${x.proof.map((id,j)=>`<div class="ph"><img src="${esc(bl(id))}" alt="รูปยืนยันการตรวจ" data-a="img" data-id="${esc(id)}"><button class="x" data-a="rmproof" data-j="${j}" aria-label="ลบรูป">×</button></div>`).join('')}${AS?`<label class="addph">+ ถ่ายรูป<input type="file" accept="image/*" capture="environment" multiple hidden data-in="proof"></label>`:''}</div>${!AS?'<p class="err" style="margin:8px 0 0">บัญชีนี้แนบรูปไม่ได้ จึงส่งผลตรวจไม่ได้ ติดต่อผู้ดูแลระบบให้เพิ่มสิทธิ์</p>':''}${x.pe&&AS?`<p class="err" role="alert" style="margin:8px 0 0">${esc(x.pe)}</p>`:''}</div>
+${x.items.map((i,n)=>`<div class="card" id="qi-${n}" style="scroll-margin:140px 0 120px;${i.e?'border-color:var(--fire)':''}"><b><span class="qn">${n+1}</span>${esc(i.q)}</b><div class="sub">${esc(i.h)}</div><div class="res" role="group" aria-label="ผลข้อ ${n+1}">${['PASS','FAIL','NA'].map(r=>`<button class="${i.r===r?'on-'+r:''}" data-a="res" data-i="${n}" data-r="${r}" aria-pressed="${i.r===r}">${RES[r]}</button>`).join('')}</div>
+${i.r==='FAIL'?`<label class="fld" style="margin-top:10px">รายละเอียดความผิดปกติ (จำเป็น)<textarea id="det-${n}" class="in" rows="2" data-in="det" data-i="${n}">${esc(i.d)}</textarea></label><div class="sub" style="margin-top:8px">รูปจุดที่ผิดปกติ อย่างน้อย 1 รูป (จำเป็น)</div><div class="phs" style="margin-top:6px">${i.ph.map((id,j)=>`<div class="ph"><img src="${esc(bl(id))}" alt="รูปหลักฐาน" data-a="img" data-id="${esc(id)}"><button class="x" data-a="rmph" data-i="${n}" data-j="${j}" aria-label="ลบรูป">×</button></div>`).join('')}${AS?`<label class="addph">+ ถ่ายรูป<input type="file" accept="image/*" capture="environment" multiple hidden data-in="ph" data-i="${n}"></label>`:''}</div>`:''}
+${i.r==='NA'?`<label class="fld" style="margin-top:10px">เหตุผลที่ไม่เกี่ยวข้อง (จำเป็น)<input id="na-${n}" class="in" data-in="na" data-i="${n}" value="${esc(i.n)}"></label>`:''}
+${i.e?`<p class="err" role="alert" style="margin:8px 0 0">${esc(i.e)}</p>`:''}</div>`).join('')}
+<div class="card"><label class="fld" for="ins-note" style="color:var(--ink)"><b><span class="qn">หมายเหตุ</span>ความเห็นเพิ่มเติม (ไม่บังคับ)</b><span class="sub">เช่น ย้ายตำแหน่งชั่วคราว ป้ายบอกตำแหน่งหลุด หรือสิ่งที่อยากแจ้งผู้ดูแล</span></label><textarea id="ins-note" class="in" rows="3" style="margin-top:8px" data-in="note" maxlength="500" placeholder="พิมพ์หมายเหตุ (ถ้ามี)">${esc(x.note)}</textarea></div>
+${S.err?`<p class="err" role="alert">${esc(S.err)}</p>`:''}
+<div class="bbar"><div class="bbar-in"><span class="prog"><b>ตอบแล้ว ${x.items.filter(i=>i.r).length}/${x.items.length} ข้อ</b>รูปยืนยัน ${x.proof.length} รูป</span><button class="btn q" data-a="cancelIns">${x.edit?'ยกเลิก':'พัก'}</button><button class="btn f" style="flex:1;min-width:0" data-a="review">ตรวจสอบและส่งผล</button></div></div></div>`;
+};
+V.defects=()=>{
+  const g={open:['OPEN','IN_PROGRESS'],resolved:['RESOLVED'],closed:['CLOSED']},k=x=>D.filter(d=>g[x].includes(d.s)).length;
+  const r=D.filter(d=>S.dtab==='all'||g[S.dtab].includes(d.s)).sort((a,b)=>a.at<b.at?1:-1),sh=r.slice(0,S.lim);
+  return `<div class="page"><div><h1>ติดตามการแก้ไขข้อบกพร่อง</h1><p class="lead">ถังที่พบปัญหาจากการตรวจ ผู้รับผิดชอบบันทึกวิธีแก้และแนบรูปหลังแก้ไข${isAdmin()?' · ผู้ดูแลยืนยันปิดงาน':''}</p></div>
+<div class="chips">${[['open','ยังต้องแก้ไข'],['resolved','รอยืนยันปิดงาน'],['closed','ปิดงานแล้ว'],['all','ทั้งหมด']].map(t=>`<button class="chip ${S.dtab===t[0]?'on':''}" data-a="dtab" data-t="${t[0]}">${t[1]}${t[0]!=='all'?' '+k(t[0]):''}</button>`).join('')}</div>
+<div class="list">${sh.map(d=>{const t=tk(d.c)||{l:'',z:''};return `<button class="li" data-a="defect" data-id="${esc(d.id)}">${tagC(d.c)}<span class="grow"><b>${esc(d.q)}</b><div>${esc(d.tx)}</div><div class="sub">${esc(t.l)} · พบ ${esc(fd(d.at))} · ผู้รับผิดชอบ ${esc(d.who||'ยังไม่กำหนด')}</div></span>${dpill(d.s)}</button>`}).join('')||`<div class="empty">${got.d?'ไม่มีรายการในหมวดนี้':'กำลังโหลด…'}</div>`}${r.length>sh.length?`<button class="li" style="justify-content:center" data-a="more"><b>แสดงเพิ่ม (อีก ${r.length-sh.length})</b></button>`:''}</div></div>`;
+};
+V.defect=()=>{
+  const d=D.find(x=>x.id===S.a);if(!d)return `<div class="page"><button class="back" data-a="nav" data-v="defects">← ติดตามการแก้ไข</button><div class="card">${got.d?'ไม่พบรายการนี้ อาจถูกลบไปแล้ว':'กำลังโหลด…'}</div></div>`;
+  const t=tk(d.c)||{l:'',z:''},adm=isAdmin(),lk=d.s==='RESOLVED'||d.s==='CLOSED',bt=[],act=S.dAct[d.id]!=null?S.dAct[d.id]:(d.act||'');
+  if(d.s==='OPEN')bt.push('<button class="btn q" data-a="dst">เริ่มดำเนินการ</button>');
+  if(d.s==='OPEN'||d.s==='IN_PROGRESS')bt.push('<button class="btn p" data-a="dfix">แจ้งว่าแก้ไขแล้ว</button>');
+  if(d.s==='RESOLVED'&&adm)bt.push('<button class="btn g" data-a="dclose">ยืนยันปิดงาน (ตรวจซ้ำแล้วเรียบร้อย)</button>');
+  if(lk&&adm)bt.push('<button class="btn q" data-a="dreopen">เปิดงานใหม่</button>');
+  if(adm)bt.push('<button class="btn q" style="margin-left:auto;color:var(--fire)" data-a="ddel">ลบรายการ</button>');
+  return `<div class="page"><button class="back" data-a="nav" data-v="defects">← ติดตามการแก้ไข</button><div><div class="acts">${tagC(d.c)}${dpill(d.s)}</div><h1 style="margin-top:6px">${esc(d.q)}</h1><p class="lead">${esc(t.l)} · ${esc(t.z?zn(t):'')} · รอบ ${esc(rLabel(d.round))}</p></div>
+<div class="card note">ผู้รับผิดชอบต้องประเมินความพร้อมใช้งานของถังและดำเนินการตามขั้นตอนความปลอดภัยของโรงงาน หากถังใช้งานไม่ได้ให้นำถังสำรองมาติดตั้งแทนทันที</div>
+<div class="card"><h3>ปัญหาที่พบ</h3><p style="margin:6px 0">${esc(d.tx)}</p><p class="sub" style="margin:0 0 8px">ผู้ตรวจพบ ${esc(d.by)} (${esc(d.dept)}) · ${esc(fdt(d.at))}</p><div class="phs">${(d.ph||[]).map(img).join('')||'<span class="sub">ไม่มีรูป</span>'}</div></div>
+<div class="card"><h3>การดำเนินการ</h3><div class="row2" style="margin-top:8px"><label class="fld">ผู้รับผิดชอบ<select id="d-who" class="in" data-in="who" ${lk?'disabled':''}><option value="">ยังไม่กำหนด</option>${allEmp().map(([dp,ns])=>`<optgroup label="${esc(dp)}">${ns.map(n=>`<option${d.who===n?' selected':''}>${esc(n)}</option>`).join('')}</optgroup>`).join('')}${d.who&&!allEmp().some(([,ns])=>ns.includes(d.who))?`<option selected>${esc(d.who)}</option>`:''}</select></label></div>
+<label class="fld" style="margin-top:10px">วิธีแก้ไข<textarea id="d-act" class="in" rows="3" data-in="act" ${lk?'disabled':''} placeholder="เช่น เปลี่ยนสลักและซีลใหม่ / ส่งเติมสาร / นำถังสำรองติดตั้งแทน">${esc(act)}</textarea></label>
+<div class="sub" style="margin-top:10px">รูปหลังแก้ไข${lk?'':AS?' (จำเป็นก่อนแจ้งว่าแก้ไขแล้ว)':''}</div><div class="phs" style="margin-top:6px">${(d.aph||[]).map(img).join('')}${!lk&&AS?`<label class="addph">+ ถ่ายรูป<input type="file" accept="image/*" capture="environment" multiple hidden data-in="aph"></label>`:''}${!(d.aph||[]).length&&(lk||!AS)?'<span class="sub">ไม่มีรูป</span>':''}</div></div>
+${S.err?`<p class="err" role="alert">${esc(S.err)}</p>`:''}<div class="acts">${bt.join('')}</div>
+<div class="list"><div class="li head">ประวัติ</div>${[...(d.log||[])].reverse().map(l=>`<div class="li" style="cursor:default"><span class="grow">${esc(DST[l.s]?DST[l.s][0]:l.s)}<div class="sub">${esc(l.by)} · ${esc(fdt(l.at))}</div></span></div>`).join('')}</div></div>`;
+};
+/* ----- office ----- */
+const roundSel=id=>`<select id="${id}" class="in" style="width:auto" data-in="or">${rounds(18).map(r=>`<option value="${r}"${S.or===r?' selected':''}>${esc(rLabel(r))}</option>`).join('')}</select>`;
+V.osum=()=>{
+  const r=S.or,M=roundMap(r),ts=actT();
+  if(!M)return `<div class="page"><div class="acts"><h1 style="flex:1">สรุปผลการตรวจ</h1>${roundSel('or1')}</div><div class="card empty">กำลังโหลดข้อมูลรอบ ${esc(rLabel(r))}…</div></div>`;
+  const z=zoneStats(ts,M,r),tot=z.reduce((s,a)=>({n:s.n+a.n,ok:s.ok+a.ok,df:s.df+a.df,dr:s.dr+a.dr}),{n:0,ok:0,df:0,dr:0}),done=tot.ok+tot.df,pct=tot.n?Math.round(done/tot.n*100):0;
+  const ins={};M.forEach(x=>{if(x.status!=='draft'&&x.round===r)ins[x.emp]=(ins[x.emp]||0)+1});const top=Object.entries(ins).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const ds={};D.forEach(d=>ds[d.s]=(ds[d.s]||0)+1);
+  const ec={EXPIRED:0,D90:0,Y1:0};ts.forEach(t=>{const b=bk(t);if(b in ec)ec[b]++});
+  const tr=rounds(6).reverse().map(rr=>{const m=roundMap(rr);if(!m)return[rr,null];let c=0;ts.forEach(t=>{const s=stOf(m,rr,t.c);if(s==='ok'||s==='defect')c++});return[rr,ts.length?Math.round(c/ts.length*100):0]});
+  return `<div class="page"><div class="acts"><div style="flex:1;min-width:200px"><h1>สรุปผลการตรวจ</h1><p class="lead">ภาพรวมรอบที่เลือก คลิกตัวเลขเพื่อดูรายการ</p></div>${roundSel('or1')}</div>
+<div class="tiles"><button class="tile k-info" data-a="rf" data-f="DONE"><span>ตรวจแล้ว</span><b>${done}<small style="font-size:15px;color:var(--mut)"> / ${tot.n}</small></b><span>${pct}% ของถังที่ใช้งาน</span></button><button class="tile k-ok" data-a="rf" data-f="ok"><span>ปกติ</span><b>${tot.ok}</b></button><button class="tile k-fire" data-a="rf" data-f="defect"><span>พบข้อบกพร่อง</span><b>${tot.df}</b></button><button class="tile" data-a="rf" data-f="none"><span>ยังไม่ตรวจ</span><b>${tot.n-done}</b><span>${tot.dr?`ในจำนวนนี้กำลังตรวจ ${tot.dr}`:''}</span></button></div>
+<div class="tbl"><table><thead><tr><th>พื้นที่</th><th class="n">ทั้งหมด</th><th class="n">ปกติ</th><th class="n">ข้อบกพร่อง</th><th class="n">ยังไม่ตรวจ</th><th style="min-width:140px">ความคืบหน้า</th></tr></thead><tbody>${z.map(a=>{const p=a.n?(a.ok+a.df)/a.n*100:0;return `<tr><td>${esc(a.name)}</td><td class="n">${a.n}</td><td class="n">${a.ok}</td><td class="n ${a.df?'c-fire':''}">${a.df}</td><td class="n">${a.n-a.ok-a.df}</td><td><div class="acts" style="flex-wrap:nowrap"><div class="bar" style="flex:1"><i style="width:${a.n?a.ok/a.n*100:0}%;background:var(--ok)"></i><i style="width:${a.n?a.df/a.n*100:0}%;background:var(--fire)"></i></div><span class="sub" style="width:38px;text-align:right">${Math.round(p)}%</span></div></td></tr>`}).join('')}</tbody></table></div>
+<div class="row2"><div class="card"><h3>ข้อบกพร่องทั้งหมด</h3><div class="tiles" style="margin-top:8px">${['OPEN','IN_PROGRESS','RESOLVED'].map(s=>`<button class="tile k-${DST[s][1]}" data-a="dtabGo" data-t="${s==='RESOLVED'?'resolved':'open'}"><span>${DST[s][0]}</span><b>${ds[s]||0}</b></button>`).join('')}</div></div>
+<div class="card"><h3>อายุถัง</h3><div class="tiles" style="margin-top:8px"><button class="tile k-fire" data-a="eb" data-b="EXPIRED"><span>ครบอายุแล้ว</span><b>${ec.EXPIRED}</b></button><button class="tile k-warn" data-a="eb" data-b="D90"><span>ภายใน 90 วัน</span><b>${ec.D90}</b></button><button class="tile k-warn" data-a="eb" data-b="Y1"><span>ภายใน 1 ปี</span><b>${ec.Y1}</b></button></div></div></div>
+<div class="row2"><div class="card"><h3>ร้อยละที่ตรวจ 6 เดือนล่าสุด</h3>${trend(tr)}</div><div class="card"><h3>ผู้ตรวจรอบนี้</h3>${top.length?`<div class="list" style="margin-top:8px;border:0">${top.map(([n,c])=>`<div class="li" style="cursor:default;padding:7px 0"><span class="grow">${esc(n)}</span><b>${c} ถัง</b></div>`).join('')}</div>`:'<p class="sub">ยังไม่มีการส่งผลตรวจในรอบนี้</p>'}</div></div></div>`;
+};
+function trend(tr){
+  const W=320,Hh=150,bw=34,gap=(W-20-bw*tr.length)/(tr.length-1);
+  return `<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="max-width:420px;margin-top:8px" role="img" aria-label="ร้อยละที่ตรวจรายเดือน"><line x1="10" x2="${W-10}" y1="118" y2="118" stroke="var(--line)"/><line x1="10" x2="${W-10}" y1="28" y2="28" stroke="var(--line)" stroke-dasharray="3 4"/><text x="${W-10}" y="22" text-anchor="end" font-size="10" fill="var(--mut)">100%</text>${tr.map(([r,v],i)=>{const x=10+i*(bw+gap),h=v==null?0:v/100*90;const[y,m]=r.split('-');return `<rect x="${x}" y="${118-h}" width="${bw}" height="${h}" rx="3" fill="${r===R?'var(--fire)':'var(--info)'}"/><text x="${x+bw/2}" y="${112-h}" text-anchor="middle" font-size="11" fill="var(--ink)">${v==null?'…':v+'%'}</text><text x="${x+bw/2}" y="134" text-anchor="middle" font-size="10" fill="var(--mut)">${MON[+m-1].slice(0,3)}.${y.slice(2)}</text>`}).join('')}</svg>`;
+}
+V.ores=()=>{
+  const r=S.or,M=roundMap(r),f=S.rf;
+  const head=`<div class="acts"><div style="flex:1;min-width:200px"><h1>ผลตรวจรายถัง</h1><p class="lead">คลิกถังที่ตรวจแล้วเพื่อดูรายละเอียด แก้ไข หรือลบผล</p></div>${roundSel('or2')}</div><div class="chips">${[['','ทั้งหมด'],['DONE','ตรวจแล้ว'],['ok','ปกติ'],['defect','พบข้อบกพร่อง'],['draft','กำลังตรวจ'],['none','ยังไม่ตรวจ']].map(t=>`<button class="chip ${f===t[0]?'on':''}" data-a="rfc" data-f="${t[0]}">${t[1]}</button>`).join('')}</div>`;
+  if(!M)return `<div class="page">${head}<div class="card empty">กำลังโหลด…</div></div>`;
+  const rows=actT().filter(t=>{const s=stOf(M,r,t.c)||'none';return !f||(f==='DONE'?s==='ok'||s==='defect':s===f)});const sh=rows.slice(0,S.lim);
+  return `<div class="page">${head}<div class="tbl"><table><thead><tr><th>รหัส</th><th>สถานที่</th><th>พื้นที่</th><th>สถานะ</th><th>รูปยืนยัน</th><th>ผู้ตรวจ</th><th>วันที่</th></tr></thead><tbody>${sh.map(t=>{const x=M.get(r+'_'+t.c),s=x&&x.status;return `<tr style="cursor:${x?'pointer':'default'}" ${x?`data-a="idetOpen" data-id="${esc(x.id)}"`:''}><td>${tagC(t.c)}</td><td>${esc(t.l)}</td><td>${esc(zn(t))}</td><td>${stPill(s)}</td><td>${!x||s==='draft'?'-':(x.proof||[]).length?(proofLate(x)?pill('warn',x.proof.length+' รูป · ตรวจเวลา'):pill('ok',x.proof.length+' รูป')):pill('fire','ไม่มีรูป')}</td><td>${x?esc(x.emp):'-'}${x&&x.note&&x.status!=='draft'?` <span class="pill c-info" title="${esc(x.note)}">มีหมายเหตุ</span>`:''}</td><td>${x?esc(fd(x.sub||x.at)):'-'}</td></tr>`}).join('')||'<tr><td colspan="7" class="empty">ไม่มีถังที่ตรงเงื่อนไข</td></tr>'}</tbody></table></div>${rows.length>sh.length?`<button class="btn q" data-a="more">แสดงเพิ่ม (อีก ${rows.length-sh.length} ถัง)</button>`:''}</div>`;
+};
+V.idet=()=>{
+  const id=S.a,round=id.split('_')[0],M=roundMap(round);const x=M&&M.get(id);
+  if(!x)return `<div class="page"><button class="back" data-a="nav" data-v="ores">← ผลตรวจ</button><div class="card empty">${M?'ไม่พบผลตรวจนี้':'กำลังโหลด…'}</div></div>`;
+  const t=tk(x.c)||{l:x.l,z:x.z,t:x.t};
+  return `<div class="page"><button class="back" data-a="nav" data-v="ores">← ผลตรวจ</button><div><div class="acts">${tagC(x.c)}${stPill(x.status)}</div><h1 style="margin-top:6px">${esc(t.l)}</h1><p class="lead">รอบ ${esc(rLabel(x.round))} · ผู้ตรวจ ${esc(x.emp)} (${esc(x.dept)}) · ส่งผล ${esc(fdt(x.sub))}${x.editBy?` · แก้ไขโดย ${esc(x.editBy)} ${esc(fdt(x.editAt))}`:''}</p></div>
+<div class="card"><h3>รูปยืนยันการตรวจ</h3>${(x.proof||[]).length?`<div class="phs" style="margin-top:8px">${x.proof.map(img).join('')}</div><p class="sub" style="margin:8px 0 0">เวลาที่ไฟล์รูปถูกสร้าง: ${(x.proofT||[]).map(t=>esc(fdt(t))).join(', ')||'-'}${proofLate(x)?` · <b class="c-warn">มีรูปที่ถ่ายก่อนส่งผลเกิน 2 ชั่วโมง ควรตรวจสอบ</b>`:''}</p>`:'<p class="err" style="margin:6px 0 0">ไม่มีรูปยืนยันการตรวจ</p>'}</div>
+<div class="list">${(x.items||[]).map((i,n)=>`<div class="li" style="cursor:default;align-items:flex-start"><span class="qn">${n+1}</span><span class="grow"><b>${esc(i.q)}</b>${i.r==='FAIL'?`<div>${esc(i.d)}</div>`:i.r==='NA'?`<div class="sub">เหตุผล: ${esc(i.n)}</div>`:''}${(i.ph||[]).length?`<div class="phs" style="margin-top:6px">${i.ph.map(img).join('')}</div>`:''}</span>${i.r?pill(i.r==='PASS'?'ok':i.r==='FAIL'?'fire':'mut',RES[i.r],i.r!=='NA'):pill('mut','ไม่ได้เลือก')}</div>`).join('')}</div>
+${x.note?`<div class="card"><h3>หมายเหตุจากผู้ตรวจ</h3><p style="margin:6px 0 0;white-space:pre-line">${esc(x.note)}</p></div>`:''}
+<div class="acts"><button class="btn p" data-a="iedit">แก้ไขผลตรวจ</button><button class="btn q" style="color:var(--fire)" data-a="idel">ลบผลตรวจนี้</button></div></div>`;
+};
+V.oexp=()=>{
+  const ts=actT(),c={EXPIRED:0,D90:0,Y1:0,PLAN:0,ALL:0};const all=ts.filter(bk).sort((a,b)=>exp(a)-exp(b)||byCode(a,b));all.forEach(t=>{const b=bk(t);if(b in c)c[b]++;c.ALL++});
+  const r=all.filter(t=>S.eb==='ALL'||bk(t)===S.eb),sh=r.slice(0,S.lim),yc={};all.forEach(t=>yc[exp(t)]=(yc[exp(t)]||0)+1);
+  const ys=Object.keys(yc).map(Number).sort((a,b)=>a-b),mx=Math.max(1,...ys.map(y=>yc[y])),W=Math.max(320,ys.length*42+12);const noYear=ts.filter(t=>!t.m);
+  return `<div class="page"><div><h1>แผนเปลี่ยนถังดับเพลิง</h1><p class="lead">ครบอายุเมื่อสิ้นปี พ.ศ. ที่ ปีผลิต + ${life()} ปี (ปรับได้ที่ตั้งค่า) ควรยืนยันกับเกณฑ์ผู้ผลิตก่อนตัดสินใจเปลี่ยน${noYear.length?` · ไม่มีปีผลิต ${noYear.length} ถัง (${noYear.map(t=>esc(t.c)).join(', ')})`:''}</p></div>
+<div class="tiles">${[['ครบอายุแล้ว','EXPIRED','fire'],['ภายใน 90 วัน','D90','warn'],['ภายใน 1 ปี','Y1','warn'],['1–3 ปีข้างหน้า','PLAN','info']].map(t=>`<button class="tile k-${t[2]}" data-a="eb" data-b="${t[1]}"><span>${t[0]}</span><b>${c[t[1]]}</b><span>ถัง</span></button>`).join('')}</div>
+<div class="card"><h3>จำนวนถังที่ครบอายุในแต่ละปี (พ.ศ.)</h3><div class="tbl" style="border:0;margin-top:8px"><svg viewBox="0 0 ${W} 150" width="${W}" style="max-width:100%;min-width:${Math.min(W,320)}px" role="img" aria-label="จำนวนถังที่ครบอายุรายปี">${ys.map((y,i)=>{const n=yc[y],h=n/mx*90,x=6+i*42;return `<rect x="${x}" y="${118-h}" width="32" height="${h}" rx="3" fill="${y<THISBE?'var(--fire)':y===THISBE?'var(--warn)':'var(--info)'}"/><text x="${x+16}" y="${112-h}" text-anchor="middle" font-size="11" fill="var(--ink)">${n}</text><text x="${x+16}" y="136" text-anchor="middle" font-size="10" fill="var(--mut)">${y}</text>`}).join('')}</svg></div></div>
+<div class="chips">${[['EXPIRED','ครบอายุแล้ว'],['D90','ภายใน 90 วัน'],['Y1','ภายใน 1 ปี'],['PLAN','1–3 ปีข้างหน้า'],['ALL','ทั้งหมด']].map(t=>`<button class="chip ${S.eb===t[0]?'on':''}" data-a="eb" data-b="${t[0]}">${t[1]} ${c[t[0]]}</button>`).join('')}</div>
+<div class="list">${sh.map(t=>{const b=bk(t),old=b==='EXPIRED';return `<button class="li" data-a="tank" data-c="${esc(t.c)}">${tagC(t.c)}<span class="grow">${esc(t.l)}<div class="sub">${esc(zn(t))} · ${esc(t.t)} · ผลิต ${t.m}</div></span>${pill(old?'fire':b==='D90'?'warn':'info',`ครบอายุ ${exp(t)}${old?' · เลยมา '+(THISBE-exp(t))+' ปี':b==='D90'?' · เหลือ '+dl(t)+' วัน':''}`)}</button>`}).join('')||'<div class="empty">ไม่มีถังในช่วงนี้</div>'}${r.length>sh.length?`<button class="li" style="justify-content:center" data-a="more"><b>แสดงเพิ่ม (อีก ${r.length-sh.length})</b></button>`:''}</div></div>`;
+};
+V.otank=()=>{
+  const q=S.tq.toLowerCase(),r=[...T.values()].sort(byCode).filter(t=>(!S.tz||t.z===S.tz)&&(!q||(t.c+' '+t.l+' '+t.t).toLowerCase().includes(q))),sh=r.slice(0,S.lim);
+  return `<div class="page"><div class="acts"><div style="flex:1;min-width:200px"><h1>ทะเบียนถังดับเพลิง</h1><p class="lead">ทั้งหมด ${T.size} ถัง · ใช้งาน ${actT().length} ถัง · เพิ่ม แก้ไข หรือเลิกใช้ถัง</p></div><button class="btn f" data-a="tnew">+ เพิ่มถัง</button></div>
+<div class="acts"><input id="tq2" class="in" style="flex:1;min-width:200px" data-in="tq" value="${esc(S.tq)}" placeholder="รหัสถัง สถานที่ หรือชนิด" autocomplete="off"><select id="tz2" class="in" style="width:auto" data-in="tz"><option value="">ทุกพื้นที่</option>${ZORD.map(z=>`<option value="${z}"${S.tz===z?' selected':''}>${esc(ZN[z])}</option>`).join('')}</select></div>
+<div class="tbl" id="rl"><table><thead><tr><th>รหัส</th><th>สถานที่</th><th>พื้นที่</th><th>ชนิด</th><th>ขนาด / Rating</th><th class="n">ปีผลิต</th><th class="n">ครบอายุ</th><th>สถานะ</th></tr></thead><tbody>${sh.map(t=>{const b=bk(t);return `<tr style="cursor:pointer" data-a="tedit" data-c="${esc(t.c)}"><td>${tagC(t.c)}</td><td>${esc(t.l)}</td><td>${esc(zn(t))}</td><td>${esc(t.t)}</td><td class="sub">${esc(spec(t)||'-')}</td><td class="n">${t.m||'-'}</td><td class="n ${b==='EXPIRED'?'c-fire':b==='D90'?'c-warn':''}">${exp(t)||'-'}</td><td>${t.active===false?pill('mut','เลิกใช้'):pill('ok','ใช้งาน')}</td></tr>`}).join('')||'<tr><td colspan="8" class="empty">ไม่พบถัง</td></tr>'}</tbody></table></div>${r.length>sh.length?`<button class="btn q" data-a="more">แสดงเพิ่ม (อีก ${r.length-sh.length} ถัง)</button>`:''}</div>`;
+};
+V.tedit=()=>{
+  const f=S.tf;if(!f)return V.otank();
+  return `<div class="page"><button class="back" data-a="nav" data-v="otank">← ทะเบียนถัง</button><h1>${f.isNew?'เพิ่มถังดับเพลิง':'แก้ไขข้อมูลถัง '+esc(f.c)}</h1>
+<div class="card" style="display:grid;gap:12px"><div class="row2"><label class="fld">รหัสถัง (เช่น E-PD-45)<input id="tf-c" class="in" data-in="tf" data-f="c" value="${esc(f.c)}" ${f.isNew?'':'disabled'} autocomplete="off" style="font-family:var(--f-mono)"></label><label class="fld">ชนิด<select id="tf-t" class="in" data-in="tf" data-f="t">${TYPES.map(t=>`<option${f.t===t?' selected':''}>${t}</option>`).join('')}</select></label></div>
+<label class="fld">สถานที่ติดตั้ง<input id="tf-l" class="in" data-in="tf" data-f="l" value="${esc(f.l)}"></label>
+<div class="row2"><label class="fld">ปีผลิต (พ.ศ.)<input id="tf-m" class="in" inputmode="numeric" data-in="tf" data-f="m" value="${esc(f.m)}" placeholder="เช่น 2568"></label><label class="fld">สถานะ<select id="tf-a" class="in" data-in="tf" data-f="active"><option value="1"${f.active?' selected':''}>ใช้งาน</option><option value="0"${!f.active?' selected':''}>เลิกใช้ (ไม่นับในการตรวจ)</option></select></label></div>
+<div class="row2"><label class="fld">ขนาด (lb)<input id="tf-sz" class="in" inputmode="numeric" data-in="tf" data-f="sz" value="${esc(f.sz)}" placeholder="15"></label><label class="fld">ชนิดการดับเพลิง (Class)<input id="tf-cls" class="in" data-in="tf" data-f="cls" value="${esc(f.cls)}" placeholder="A, B หรือ C"></label><label class="fld">Fire Rating<input id="tf-fr" class="in" data-in="tf" data-f="fr" value="${esc(f.fr)}" placeholder="6A-20B"></label></div>
+<label class="fld">หมายเหตุ<input id="tf-n" class="in" data-in="tf" data-f="note" value="${esc(f.note)}" placeholder="เช่น ขนาด 15 ปอนด์, ผู้จำหน่าย"></label>
+<p class="sub" style="margin:0">พื้นที่กำหนดจากรหัส: PD ผลิต · WH คลังสินค้า · FN คลังสินค้า (FG) · EN วิศวกรรม · AM ธุรการ · LB ห้องปฏิบัติการ · SA ขายหน้าร้าน</p>
+${S.err?`<p class="err" role="alert">${esc(S.err)}</p>`:''}<div class="acts"><button class="btn p" data-a="tsave">บันทึก</button><button class="btn q" data-a="nav" data-v="otank">ยกเลิก</button></div></div></div>`;
+};
+V.oemp=()=>{
+  const ed=S.empEdit||(S.empEdit=Object.fromEntries(allEmp().map(([d,ns])=>[d,ns.join('\n')])));const ds=Object.keys(ed);
+  const admins=CFG.admins||[];names(admins.concat(S.admHits.map(h=>h.id)));
+  const cand=[...new Set([...I.values()].map(x=>x.uid).concat(D.map(d=>d.uid)).filter(u=>u&&!admins.includes(u)&&u!==ME.id))];names(cand);
+  return `<div class="page"><div><h1>พนักงานและผู้ดูแล</h1><p class="lead">รายชื่อผู้ตรวจแยกตามหน่วยงาน บรรทัดละ 1 ชื่อ</p></div>
+<div class="row2">${ds.map((d,i)=>`<div class="card"><div class="acts" style="justify-content:space-between"><h3>${esc(d)}</h3><span class="sub">${ed[d].split('\n').filter(s=>s.trim()).length} คน</span></div><textarea id="emp-${i}" class="in" rows="6" style="margin-top:8px" data-in="empt" data-d="${esc(d)}">${esc(ed[d])}</textarea><button class="btn q sm" style="margin-top:6px;color:var(--fire)" data-a="empDelDept" data-d="${esc(d)}">ลบหน่วยงานนี้</button></div>`).join('')}
+<div class="card"><h3>เพิ่มหน่วยงาน</h3><div class="acts" style="margin-top:8px"><input id="nd" class="in" style="flex:1" data-in="nd" value="${esc(S.nd)}" placeholder="ชื่อหน่วยงาน"><button class="btn q" data-a="empAddDept">เพิ่ม</button></div></div></div>
+<div class="acts sticky-act"><button class="btn p" data-a="empSave">บันทึกรายชื่อพนักงาน</button><button class="btn q" data-a="empReset">ยกเลิกการแก้ไข</button></div>
+</div>`;
+};
+const admHitsHtml=()=>S.admHits.filter(h=>!(CFG.admins||[]).includes(h.id)).map(h=>`<button class="chip" data-a="admAdd" data-u="${esc(h.id)}">+ ${esc(h.name)}</button>`).join('');
+V.oqr=()=>{
+  if(!window.qrcode){lib('qr').then(render).catch(()=>{});}
+  const q=S.qq.toLowerCase(),r=actT().filter(t=>(!S.qrz||t.z===S.qrz)&&(!q||(t.c+' '+t.l+' '+t.t).toLowerCase().includes(q))),sh=r.slice(0,S.lim);
+  return `<div class="page"><div class="acts"><div style="flex:1;min-width:220px"><h1>คิวอาร์โค้ดประจำถัง</h1><p class="lead">ติดป้ายที่ถังแต่ละใบ ผู้ตรวจสแกนด้วยกล้องมือถือแล้วเข้าแบบตรวจถังนั้นได้ทันที</p></div><button class="btn f" data-a="qrPdf">PDF ป้ายทั้งหมด (${r.length} ป้าย)</button></div>
+${selfUrl()?`<div class="card note">QR พาไปที่ลิงก์หน้าเว็บนี้แล้วเปิดถังตามรหัส ${GH?'ผู้ตรวจ':'ผู้ตรวจต้องเข้าสู่ระบบ Claude ในมือถือ และ'}เลือกชื่อผู้ตรวจไว้ครั้งแรก หลังจากนั้นสแกนแล้วเข้าแบบตรวจได้เลย</div>`:`<div class="card flag"><b class="c-fire">ยังไม่ได้ใส่ลิงก์หน้าเว็บ</b><div class="sub">QR จะมีแค่รหัสถัง ต้องสแกนผ่านปุ่มในหน้าเว็บเท่านั้น ใส่ลิงก์ได้ที่ ตั้งค่า</div></div>`}
+<div class="acts"><input id="qq" class="in" style="flex:1;min-width:200px" data-in="qq" value="${esc(S.qq)}" placeholder="ค้นหารหัสถังหรือสถานที่" autocomplete="off"><select id="qrz2" class="in" style="width:auto" data-in="qrzv"><option value="">ทุกพื้นที่</option>${ZORD.map(z=>`<option value="${z}"${S.qrz===z?' selected':''}>${esc(ZN[z])}</option>`).join('')}</select></div>
+<div class="qg">${sh.map(t=>`<div class="qc"><div class="qbox">${qrSvg(t)||'<span class="sub">กำลังสร้าง…</span>'}</div><div style="min-width:0">${tagC(t.c)}<div class="ql">${esc(t.l)}</div><div class="sub">${esc(zn(t))} · ${esc(t.t)}</div></div><div class="acts"><button class="btn q sm" data-a="qrPng" data-c="${esc(t.c)}">บันทึกเป็นรูป</button><button class="btn q sm" data-a="tank" data-c="${esc(t.c)}">ข้อมูลถัง</button></div></div>`).join('')||'<div class="card empty">ไม่พบถังตามตัวกรอง</div>'}</div>
+${r.length>sh.length?`<button class="btn q" data-a="more">แสดงเพิ่ม (อีก ${r.length-sh.length} ถัง)</button>`:''}</div>`;
+};
+V.oexport=()=>{
+  const zs=ZORD.filter(z=>actT().some(t=>t.z===z));
+  return `<div class="page"><div><h1>ส่งออกรายงาน</h1><p class="lead">ไฟล์จะถูกส่งให้บันทึกลงเครื่อง ระบบจะถามยืนยันก่อนทุกครั้ง</p></div>
+<div class="card"><h3>รายงานประจำเดือน</h3><div class="acts" style="margin-top:8px"><label class="fld" style="flex:1;min-width:200px">รอบตรวจ${roundSel('or3')}</label></div><div class="acts" style="margin-top:10px"><button class="btn p" data-a="xRound">Excel ผลตรวจประจำเดือน</button><button class="btn q" data-a="pdfRound">PDF รายงานพร้อมช่องลงนาม</button></div><p class="sub" style="margin:8px 0 0">Excel มี 3 แผ่นงาน: สรุปตามพื้นที่ · ผลตรวจรายถังแยกทุกหัวข้อ · ข้อบกพร่องในรอบนั้น</p></div>
+<div class="row2"><div class="card"><h3>ข้อมูลทั้งหมด</h3><div class="acts" style="margin-top:8px"><button class="btn q" data-a="xTanks">Excel ทะเบียนถังและอายุ</button><button class="btn q" data-a="xDefects">Excel ข้อบกพร่องทุกรอบ</button></div></div>
+<div class="card"><h3>ป้าย QR ติดถัง</h3><p class="sub">A4 หน้าละ 15 ป้าย ตัดตามเส้นประ แนะนำพิมพ์บนสติกเกอร์กันน้ำ${selfUrl()?' · สแกนด้วยกล้องมือถือแล้วเปิดแบบตรวจถังนั้นได้ทันที':' · ยังไม่ได้ใส่ลิงก์หน้าเว็บที่ตั้งค่า QR จะมีแค่รหัสถัง (ต้องสแกนผ่านปุ่มในหน้าเว็บ)'}</p><div class="acts" style="margin-top:8px"><select id="qrz" class="in" style="width:auto;flex:1" data-in="qrz"><option value="">ทุกพื้นที่ (${actT().length} ป้าย)</option>${zs.map(z=>`<option value="${z}"${S.qrz===z?' selected':''}>${esc(ZN[z])} (${actT().filter(t=>t.z===z).length})</option>`).join('')}</select><button class="btn f" data-a="pdfQR">สร้าง PDF ป้าย QR</button></div></div></div></div>`;
+};
+V.oset=()=>`<div class="page"><div><h1>ตั้งค่า</h1></div><div class="card" style="display:grid;gap:12px"><label class="fld">อายุใช้งานถัง (ปี นับจากปีผลิต)<input id="s-life" class="in" style="max-width:160px" inputmode="numeric" data-in="slife" value="${esc(S.sLife!=null?S.sLife:life())}"></label><label class="fld">ลิงก์หน้าเว็บนี้ (ใช้ใส่ใน QR ให้สแกนด้วยกล้องมือถือแล้วเปิดถังได้ทันที)<input id="s-url" class="in" data-in="surl" value="${esc(S.sUrl!=null?S.sUrl:CFG.baseUrl||'')}" placeholder="${GH?'เว้นว่างได้ ระบบใช้ลิงก์ของหน้านี้อัตโนมัติ':'https://claude.ai/...'}" autocomplete="off"></label><div class="acts"><button class="btn p" data-a="setSave">บันทึกการตั้งค่า</button></div></div>
+<div class="card" style="display:grid;gap:12px"><div><h3>รหัสผ่านหลังบ้าน</h3><p class="sub" style="margin:2px 0 0">${CFG.admPw?`ตั้งรหัสผ่านแล้ว · เปลี่ยนล่าสุด ${esc(fdt(CFG.admPw.at))}`:'<b class="c-fire">ยังไม่ได้ตั้งรหัสผ่าน</b> ตอนนี้มีแค่เจ้าของหน้าเว็บที่เข้าหลังบ้านได้'} · เมื่อเปลี่ยนรหัส ทุกเครื่องที่เคยเข้าไว้จะต้องใส่รหัสใหม่</p></div><div class="row2"><label class="fld">รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)<input id="pw1" class="in" type="password" data-in="pw1" value="${esc(S.pw1||'')}" autocomplete="new-password"></label><label class="fld">ยืนยันรหัสผ่านใหม่<input id="pw2" class="in" type="password" data-in="pw2" value="${esc(S.pw2||'')}" autocomplete="new-password"></label></div><div class="acts"><button class="btn p" data-a="pwSet">${CFG.admPw?'เปลี่ยนรหัสผ่าน':'ตั้งรหัสผ่าน'}</button></div></div>
+<div class="card note">สิทธิ์การใช้งาน: ${GH?'ทุกคนที่มีลิงก์หน้าเว็บบันทึกผลตรวจได้':'ผู้ตรวจทุกคนต้องเข้าสู่ระบบ Claude และได้รับเชิญให้แก้ไขหน้านี้จากเมนูแชร์'} หลังบ้านต้องใส่รหัสผ่าน ยกเว้นเจ้าของหน้าเว็บ</div></div>`;
+
+/* ---------- render ---------- */
+function render(){
+  if(typeof hideTip==='function')hideTip();
+  const app=$('#app');const ae=document.activeElement,fid=ae&&ae.id;let ss=null,se=null;try{ss=ae.selectionStart;se=ae.selectionEnd}catch(e){}
+  let body;
+  if(FATAL)body=`<div class="page"><div class="card flag"><h2>ใช้งานไม่ได้ในมุมมองนี้</h2><p>${esc(FATAL)}</p></div></div>`;
+  else if(!READY)body=`<div class="page"><div class="card"><h2>FEMS</h2><p class="sub" style="margin:2px 0 0">Fire Extinguisher Management System · ระบบบริหารจัดการและตรวจสอบถังดับเพลิง</p><p class="lead">กำลังโหลดข้อมูล…</p></div></div>`;
+  else{if(!isAdmin()&&(S.v==='defects'||S.v==='defect'))S.v='home';
+    if(S.mode==='office'&&!isAdmin()){S.mode='field';if(S.v[0]==='o'||S.v==='idet'||S.v==='tedit')S.v='home'}body=(V[S.v]||V.home)()}
+  const bm=false;app.className=S.v==='insp'&&READY?'pad-b':bm?'pad-m':'';
+  app.innerHTML=(READY&&!FATAL?header():'')+body+(bm?`<div class="bbar bb-m"><div class="bbar-in"><button class="scan" data-a="scan"><span class="qi" aria-hidden="true"><i></i><i></i><i></i><i style="border-style:dotted"></i></span><span><b>สแกน QR ที่ถัง</b></span></button></div></div>`:'')+
+    (S.conf?`<div class="ov" role="dialog" aria-modal="true"><div class="card"><p style="margin-top:0">${esc(S.conf.msg)}</p><div class="acts"><button class="btn f" data-a="cok">${esc(S.conf.ok)}</button><button class="btn q" data-a="cno">ยกเลิก</button></div></div></div>`:'')+
+    (S.pwBox?`<div class="ov" role="dialog" aria-modal="true" aria-labelledby="pwt"><div class="card" style="display:grid;gap:10px"><h2 id="pwt">เข้าสู่หลังบ้าน</h2><p class="sub" style="margin:0">${CFG.admPw?'ใส่รหัสผ่านผู้ดูแลระบบ ระบบจะจำไว้ในเครื่องนี้ 12 ชั่วโมง':'ยังไม่ได้ตั้งรหัสผ่านหลังบ้าน ติดต่อเจ้าของระบบให้ตั้งรหัสผ่านก่อน'}</p>${CFG.admPw?`<input id="admpw" class="in" type="password" data-in="pwin" value="${esc(S.pwIn||'')}" autocomplete="current-password" placeholder="รหัสผ่าน">`:''}${S.pwErr?`<p class="err" role="alert" style="margin:0">${esc(S.pwErr)}</p>`:''}<div class="acts">${CFG.admPw?'<button class="btn p" data-a="pwGo">เข้าสู่หลังบ้าน</button>':''}<button class="btn q" data-a="pwNo">ยกเลิก</button></div></div></div>`:'')+
+    (S.img?`<div class="ov" data-a="imgx"><img src="${esc(bl(S.img))}" alt="รูปขยาย"></div>`:'')+
+    (S.busy?`<div class="busy" role="status">${esc(S.busy)}</div>`:'')+(S.toast?`<div class="toast" role="status">${esc(S.toast)}</div>`:'');
+  if(fid){const n=document.getElementById(fid);if(n&&n!==document.activeElement){n.focus({preventScroll:true});try{if(ss!=null)n.setSelectionRange(ss,se)}catch(e){}}}
+}
+function confirmBox(msg,ok,fn){S.conf={msg,ok,fn};render()}
+
+/* ---------- events ---------- */
+document.addEventListener('click',async ev=>{
+  const el=ev.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
+  if(el.tagName==='LABEL')return;
+  switch(a){
+  case 'mode':if(el.dataset.m==='office'&&!isAdmin()){S.pwBox=true;S.pwErr='';S.pwIn='';render();setTimeout(()=>{const n=$('#admpw');n&&n.focus()},30);break}if(S.ins&&!S.ins.edit){clearTimeout(dT);saveDraft()}S.ins=null;S.mode=el.dataset.m;go(S.mode==='office'?'osum':'home');break;
+  case 'nav':if(S.ins&&!S.ins.edit){clearTimeout(dT);saveDraft()}S.ins=null;go(el.dataset.v);break;
+  case 'more':S.lim+=40;render();break;
+  case 'scan':liveScan();break;
+  case 'identEdit':S.editIdent=true;render();break;
+  case 'zf':S.zf=el.dataset.z;S.lim=40;if(S.v==='home'){go('check');break}render();{const n=$('#todo');if(n&&S.zf)n.scrollIntoView({block:'start',behavior:'smooth'})}break;
+  case 'pwGo':tryUnlock();break;
+  case 'pwNo':S.pwBox=false;S.pwErr='';render();break;
+  case 'lock':lockOffice();toast('ออกจากหลังบ้านแล้ว');break;
+  case 'pwSet':setPw();break;
+  case 'zv':S.zv=el.dataset.z;render();break;
+  case 'expGo':if(isAdmin()){S.mode='office';S.eb='EXPIRED';go('oexp')}else go('reg');break;
+  case 'tank':go('tank',el.dataset.c);break;
+  case 'hist':S.hc=el.dataset.c;go('hview',el.dataset.id);break;
+  case 'start':startIns(el.dataset.c);break;
+  case 'res':{const n=+el.dataset.i,i=S.ins.items[n];i.r=el.dataset.r;i.e='';render();draftSoon();if(i.r==='PASS'){const nx=S.ins.items.findIndex((x,k)=>k>n&&!x.r);const c=nx>=0&&document.getElementById('qi-'+nx);if(c)c.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'})}break}
+  case 'allpass':S.ins.items.forEach(i=>{if(!i.r){i.r='PASS';i.e=''}});render();draftSoon();break;
+  case 'rmproof':S.ins.proof.splice(+el.dataset.j,1);S.ins.proofT.splice(+el.dataset.j,1);render();draftSoon();break;
+  case 'rmph':{const i=S.ins.items[+el.dataset.i];i.ph.splice(+el.dataset.j,1);render();draftSoon();break}
+  case 'img':S.img=el.dataset.id;render();break;
+  case 'imgx':S.img=null;render();break;
+  case 'review':if(validate()){S.rev=true;window.scrollTo(0,0)}render();break;
+  case 'redit':S.rev=false;render();break;
+  case 'submit':submit();break;
+  case 'cancelIns':{const x=S.ins;clearTimeout(dT);if(x&&!x.edit)await saveDraft();S.ins=null;go(S.mode==='office'?'ores':'tank',S.mode==='office'?undefined:x&&x.c);break}
+  case 'dtab':S.dtab=el.dataset.t;S.lim=40;render();break;
+  case 'dtabGo':S.dtab=el.dataset.t;go('defects');break;
+  case 'defect':if(isAdmin())S.mode='office';go('defect',el.dataset.id);break;
+  case 'dst':await dUpd(S.a,{s:'IN_PROGRESS'},'IN_PROGRESS');toast('เริ่มดำเนินการแล้ว');break;
+  case 'dfix':{const d=D.find(x=>x.id===S.a);const act=(S.dAct[d.id]!=null?S.dAct[d.id]:d.act||'').trim();
+    if(!act){S.err='ระบุวิธีแก้ไขก่อนแจ้งว่าแก้ไขแล้ว';render();break}
+    if(AS&&!(d.aph||[]).length){S.err='ถ่ายรูปหลังแก้ไขอย่างน้อย 1 รูป';render();break}
+    S.err='';await dUpd(d.id,{s:'RESOLVED',act},'RESOLVED');delete S.dAct[d.id];toast('แจ้งว่าแก้ไขแล้ว รอผู้ดูแลยืนยันปิดงาน');break}
+  case 'dclose':await dUpd(S.a,{s:'CLOSED',closedBy:actor(),closedAt:nowISO()},'CLOSED');toast('ปิดงานแล้ว');break;
+  case 'dreopen':await dUpd(S.a,{s:'IN_PROGRESS'},'IN_PROGRESS');toast('เปิดงานใหม่แล้ว');break;
+  case 'ddel':confirmBox('ลบรายการข้อบกพร่องนี้ถาวร? ประวัติการแก้ไขจะหายไปด้วย','ลบรายการ',async()=>{try{await wq(()=>DB.doc('defects/'+S.a).delete());go('defects');toast('ลบแล้ว')}catch(e){toast(errMsg(e))}});break;
+  case 'cok':{const f=S.conf.fn;S.conf=null;render();await f();break}
+  case 'cno':S.conf=null;render();break;
+  case 'rf':S.rf=el.dataset.f;go('ores');break;
+  case 'rfc':S.rf=el.dataset.f;S.lim=40;render();break;
+  case 'eb':S.eb=el.dataset.b;go('oexp');break;
+  case 'idetOpen':S.mode=isAdmin()?'office':S.mode;go('idet',el.dataset.id);break;
+  case 'iedit':{const round=S.a.split('_')[0],x=roundMap(round).get(S.a);startIns(x.c,x);break}
+  case 'idel':confirmBox('ลบผลตรวจนี้? ถังจะกลับเป็น "ยังไม่ตรวจ" ในรอบนั้น (รายการข้อบกพร่องที่สร้างไว้ยังอยู่)','ลบผลตรวจ',async()=>{const id=S.a,round=id.split('_')[0];try{await wq(()=>DB.doc('insp/'+id).delete());if(round!==R)delete OI[round];H[id.slice(round.length+1)]=undefined;go('ores');toast('ลบผลตรวจแล้ว')}catch(e){toast(errMsg(e))}});break;
+  case 'tnew':S.tf={isNew:true,c:'E-',l:'',t:'Chemical',m:'',sz:'15',cls:'',fr:'',active:true,note:''};go('tedit');break;
+  case 'tedit':{const t=tk(el.dataset.c);S.tf={isNew:false,c:t.c,l:t.l,t:t.t,m:t.m||'',sz:t.sz||'',cls:t.cls||'',fr:t.fr||'',active:t.active!==false,note:t.note||''};go('tedit');break}
+  case 'tsave':{const f=S.tf,c=f.c.trim().toUpperCase(),m=String(f.m).trim();
+    if(!/^E-[A-Z]{2}-\d+$/.test(c)){S.err='รหัสถังต้องเป็นรูปแบบ E-XX-ตัวเลข เช่น E-PD-45';render();break}
+    const z=c.split('-')[1];if(!ZN[z]){S.err='รหัสพื้นที่ '+z+' ไม่รู้จัก ใช้ PD, WH, FN, EN, AM, LB หรือ SA';render();break}
+    if(f.isNew&&T.has(c)){S.err='มีรหัสถัง '+c+' อยู่แล้ว';render();break}
+    if(!f.l.trim()){S.err='ระบุสถานที่ติดตั้ง';render();break}
+    if(m&&!/^25\d\d$/.test(m)){S.err='ปีผลิตต้องเป็นปี พ.ศ. 4 หลัก เช่น 2568';render();break}
+    try{await wq(()=>DB.doc('tanks/'+c).set({l:f.l.trim(),t:f.t,m:m?+m:null,z,sz:+String(f.sz).trim()||null,cls:String(f.cls).trim().toUpperCase(),fr:String(f.fr).trim(),active:!!f.active,note:f.note.trim()}));S.tf=null;go('otank');toast('บันทึกถัง '+c+' แล้ว')}catch(e){toast(errMsg(e))}break}
+  case 'empAddDept':{const n=S.nd.trim();if(!n)break;if(!(n in S.empEdit))S.empEdit[n]='';S.nd='';render();break}
+  case 'empDelDept':{const d=el.dataset.d;confirmBox(`ลบหน่วยงาน "${d}" ออกจากรายการแก้ไข? (มีผลเมื่อกดบันทึก)`,'ลบ',()=>{delete S.empEdit[d];render()});break}
+  case 'empReset':S.empEdit=null;render();break;
+  case 'empSave':{const emp={};for(const d in S.empEdit){emp[d]=[...new Set(S.empEdit[d].split('\n').map(s=>s.trim()).filter(Boolean))]}
+    try{await wq(()=>DB.doc('cfg/main').set({...CFG,emp}));S.empEdit=null;toast('บันทึกรายชื่อพนักงานแล้ว')}catch(e){toast(errMsg(e))}break}
+  case 'admAdd':{const u=el.dataset.u,ad=[...new Set([...(CFG.admins||[]),u])];try{await wq(()=>DB.doc('cfg/main').update({admins:ad}));toast('เพิ่มผู้ดูแลแล้ว')}catch(e){toast(errMsg(e))}break}
+  case 'admDel':{const u=el.dataset.u;try{await wq(()=>DB.doc('cfg/main').update({admins:(CFG.admins||[]).filter(x=>x!==u)}));toast('ถอนสิทธิ์แล้ว')}catch(e){toast(errMsg(e))}break}
+  case 'setSave':{const lf=+(S.sLife!=null?S.sLife:life()),url=(S.sUrl!=null?S.sUrl:CFG.baseUrl||'').trim();
+    if(!(lf>=1&&lf<=30)){toast('อายุใช้งานต้องเป็น 1–30 ปี');break}
+    if(url&&!/^https:\/\//.test(url)){toast('ลิงก์ต้องขึ้นต้นด้วย https://');break}
+    try{await wq(()=>DB.doc('cfg/main').update({life:lf,baseUrl:url}));S.sLife=S.sUrl=null;toast('บันทึกการตั้งค่าแล้ว')}catch(e){toast(errMsg(e))}break}
+  case 'xRound':xRound(S.or);break;
+  case 'pdfRound':pdfRound(S.or);break;
+  case 'xTanks':xTanks();break;
+  case 'xDefects':xDefects();break;
+  case 'pdfQR':pdfQR(S.qrz);break;
+  case 'qrPdf':{const q=S.qq.toLowerCase();pdfQR(S.qrz,actT().filter(t=>(!S.qrz||t.z===S.qrz)&&(!q||(t.c+' '+t.l+' '+t.t).toLowerCase().includes(q))));break}
+  case 'qrPng':pngQR(el.dataset.c);break;
+  }
+});
+let admT;
+document.addEventListener('input',ev=>{
+  const t=ev.target,k=t.dataset&&t.dataset.in;if(!k)return;
+  if(k==='q'){S.q=t.value;$('#qres').innerHTML=qres()}
+  else if(k==='tq'||k==='tz'){S[k]=t.value;S.lim=40;render()}
+  else if(k==='det'){S.ins.items[+t.dataset.i].d=t.value;draftSoon()}
+  else if(k==='na'){S.ins.items[+t.dataset.i].n=t.value;draftSoon()}
+  else if(k==='note'){S.ins.note=t.value.slice(0,500);draftSoon()}
+  else if(k==='act'){S.dAct[S.a]=t.value}
+  else if(k==='tf'){const f=t.dataset.f;S.tf[f]=f==='active'?t.value==='1':t.value}
+  else if(k==='empt'){S.empEdit[t.dataset.d]=t.value}
+  else if(k==='nd'){S.nd=t.value}
+  else if(k==='slife'){S.sLife=t.value}else if(k==='surl'){S.sUrl=t.value}
+  else if(k==='pwin'){S.pwIn=t.value}
+  else if(k==='pw1'){S.pw1=t.value}else if(k==='pw2'){S.pw2=t.value}
+  else if(k==='qq'){S.qq=t.value;S.lim=40;render()}
+  else if(k==='admq'){S.admQ=t.value;clearTimeout(admT);admT=setTimeout(async()=>{S.admHits=U&&S.admQ.trim()?await U.search(S.admQ.trim()):[];const n=$('#admhits');if(n)n.innerHTML=admHitsHtml()},250)}
+});
+document.addEventListener('change',async ev=>{
+  const t=ev.target,k=t.dataset&&t.dataset.in;
+  if(t.id==='qrfile'){const f=t.files&&t.files[0];t.value='';if(f)onQR(f);return}
+  if(!k)return;
+  if(k==='pick'){S.pick=t.value;render()}
+  else if((k==='dept'||k==='emp')&&S.v==='tank'&&(S.tpick=S.a,false)){}
+  else if(k==='dept'){S.dept=t.value;S.emp='';saveIdent();render()}
+  else if(k==='emp'){S.emp=t.value;S.editIdent=false;saveIdent();render()}
+  else if(k==='or'){S.or=t.value;S.lim=40;render()}
+  else if(k==='qrz'){S.qrz=t.value}
+  else if(k==='qrzv'){S.qrz=t.value;S.lim=40;render()}
+  else if(k==='who'){await dUpd(S.a,{who:t.value})}
+  else if(k==='act'){const v=t.value;await dUpd(S.a,{act:v});delete S.dAct[S.a]}
+  else if(k==='proof'){const fs=[...t.files];t.value='';const x=S.ins;const tm=[];const ids=await uploadFiles(fs,stampFor(x.c,x.emp),tm);if(S.ins===x&&ids.length){x.proof.push(...ids);x.proofT.push(...tm.slice(0,ids.length));x.pe='';render();draftSoon()}}
+  else if(k==='ph'){const fs=[...t.files];t.value='';const n=+t.dataset.i;const ids=await uploadFiles(fs,S.ins&&stampFor(S.ins.c,S.ins.emp));if(S.ins&&ids.length){S.ins.items[n].ph.push(...ids);S.ins.items[n].e='';render();draftSoon()}}
+  else if(k==='aph'){const fs=[...t.files];t.value='';const id=S.a;const dd=D.find(x=>x.id===id);const ids=await uploadFiles(fs,dd&&['หลังแก้ไข · '+stampFor(dd.c)[0],stampFor(dd.c)[1],stampFor(dd.c)[2]]);const d=D.find(x=>x.id===id);if(d&&ids.length){await dUpd(id,{aph:[...(d.aph||[]),...ids]});S.err=''}}
+});
+document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='admpw'){ev.preventDefault();tryUnlock();return}if(ev.key==='Escape'&&S.pwBox){S.pwBox=false;render();return}if(ev.key==='Escape'&&(S.img||S.conf)){S.img=null;S.conf=null;render()}});
+function onHash(){const h=(location.hash||'').slice(1).toUpperCase();if(/^E-[A-Z]{2}-\d+$/.test(h)){if(READY)openCode(h);else S.pendingHash=h}}
+window.addEventListener('hashchange',onHash);
+let tipEl=null;function showTip(el,x,y){const[a,b,c]=el.dataset.tip.split('|');if(!tipEl){tipEl=document.createElement('div');tipEl.className='tip';tipEl.setAttribute('role','status');document.body.appendChild(tipEl)}tipEl.innerHTML=`<b>${esc(a)}</b>${esc(b)} · ${esc(c)}`;const w=tipEl.offsetWidth,h=tipEl.offsetHeight;tipEl.style.left=Math.max(8,Math.min(innerWidth-w-8,x-w/2))+'px';tipEl.style.top=Math.max(8,y-h-12)+'px'}
+function hideTip(){if(tipEl){tipEl.remove();tipEl=null}}
+document.addEventListener('pointermove',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(el&&e.pointerType!=='touch')showTip(el,e.clientX,e.clientY);else if(!el)hideTip()});
+document.addEventListener('pointerdown',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(el&&e.pointerType==='touch'){const r=el.getBoundingClientRect();showTip(el,r.left+r.width/2,r.top);setTimeout(hideTip,1800)}});
+
+/* ---------- boot ---------- */
+const use=n=>window.claude&&window.claude.use?window.claude.use(n).catch(()=>null):Promise.resolve(null);
+async function boot(){
+  render();
+  [DB,U,AS,DL]=await Promise.all(['db','user','assets','downloads'].map(use));
+  if(!DB){FATAL=GH?'เชื่อมต่อฐานข้อมูลไม่ได้ ตรวจการเชื่อมต่ออินเทอร์เน็ต หรือแจ้งผู้ดูแลให้ตรวจไฟล์ firebase-config.js':'เปิดหน้านี้ใน Claude โดยเข้าสู่ระบบด้วยบัญชีที่ได้รับเชิญ จึงจะบันทึกและดูผลตรวจได้';render();return}
+  if(U){try{ME=await U.me();OWNER=!!ME.isOwner}catch(e){}}
+  const ready=()=>{if(!READY&&got.t&&got.c&&got.i&&got.d)READY=true;if(READY&&S.pendingHash){const h=S.pendingHash;S.pendingHash=null;openCode(h)}render()};
+  const fail=e=>{if(e&&e.code==='revoked'){FATAL='สิทธิ์การเข้าถึงหน้านี้เปลี่ยนไป รีเฟรชหน้าเพื่อเข้าใหม่';render()}};
+  DB.collection('tanks').onSnapshot(s=>{T=new Map(s.docs.map(d=>[d.id,{c:d.id,...d.data()}]));got.t=true;ready()},fail);
+  DB.doc('cfg/main').onSnapshot(s=>{const v=s.exists?s.data():{};CFG={emp:v.emp||{},life:v.life||5,baseUrl:v.baseUrl||'',admins:v.admins||[],admPw:v.admPw||null};checkUnlock();got.c=true;ready()},fail);
+  DB.collection('insp').where('round','==',R).onSnapshot(s=>{I=new Map(s.docs.map(d=>[d.id,{id:d.id,...d.data()}]));got.i=true;ready()},fail);
+  DB.collection('defects').onSnapshot(s=>{D=s.docs.map(d=>({id:d.id,...d.data()}));got.d=true;ready()},fail);
+  onHash();
+}
+boot();
+})();
+</script>
+
+</body>
+</html>
